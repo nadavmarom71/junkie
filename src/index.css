@@ -1,0 +1,167 @@
+/* ── Discovery Font ─────────────────────────────────────── */
+@font-face {
+  font-family: 'Discovery';
+  src: url('/fonts/Discovery_Fs-Light.woff2') format('woff2');
+  font-weight: 300;
+}
+@font-face {
+  font-family: 'Discovery';
+  src: url('/fonts/Discovery_Fs-Regular.woff2') format('woff2');
+  font-weight: 400 500 600 700 800 900;
+}
+
+@import "tailwindcss";
+/* ── Tailwind v4: register color utilities from CSS custom properties ── */
+@theme inline {
+  --color-background:           hsl(var(--background));
+  --color-foreground:           hsl(var(--foreground));
+  --color-card:                 hsl(var(--card));
+  --color-card-foreground:      hsl(var(--card-foreground));
+  --color-popover:              hsl(var(--popover));
+  --color-popover-foreground:   hsl(var(--popover-foreground));
+  --color-secondary:            hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted:                hsl(var(--muted));
+  --color-muted-foreground:     hsl(var(--muted-foreground));
+  --color-accent:               hsl(var(--accent));
+  --color-accent-foreground:    hsl(var(--accent-foreground));
+  --color-destructive:          hsl(var(--destructive));
+  --color-border:               hsl(var(--border));
+  --color-input:                hsl(var(--input));
+  --color-ring:                 hsl(var(--ring));
+}
+
+
+@layer base {
+  :root {
+    /* ── Dark Glassmorphism Design Tokens ── */
+    --bg:          #080B14;
+    --bg-2:        #0D1117;
+    --glass:       rgba(255,255,255,0.055);
+    --glass-b:     rgba(255,255,255,0.09);
+    --glass-h:     rgba(255,255,255,0.10);
+    --primary:     #2563EB;
+    --primary-end: #056dff;
+    --success:     #00C48C;
+    --danger:      #F43F5E;
+    --warn:        #F59E0B;
+    --text:        #FFFFFF;
+    --t2:          rgba(255,255,255,0.5);
+    --t3:          rgba(255,255,255,0.3);
+
+    /* ── Shadcn-compatible dark variables ── */
+    --background:             222 47% 6%;
+    --foreground:             0 0% 100%;
+    --card:                   222 40% 8%;
+    --card-foreground:        0 0% 100%;
+    --popover:                222 40% 8%;
+    --popover-foreground:     0 0% 100%;
+    --secondary:              222 30% 14%;
+    --secondary-foreground:   0 0% 90%;
+    --muted:                  222 30% 14%;
+    --muted-foreground:       215 16% 55%;
+    --accent:                 222 30% 14%;
+    --accent-foreground:      0 0% 90%;
+    --destructive:            350 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border:                 222 20% 18%;
+    --input:                  222 20% 18%;
+    --ring:                   221 83% 53%;
+    --radius:                 0.75rem;
+  }
+
+  * {
+    box-sizing: border-box;
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    direction: rtl;
+    font-family: 'Discovery', 'Heebo', 'Arial', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+  }
+
+  body {
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+  }
+
+  /* Radial gradient background blobs */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% -10%, rgba(37,99,235,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 90% 100%, rgba(5,109,255,0.12) 0%, transparent 55%),
+      linear-gradient(180deg, #080B14 0%, #0A0E1A 100%);
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+
+  /* Recharts needs LTR internally */
+  .recharts-wrapper { direction: ltr; }
+}
+
+/* ── Animations ─────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes glowPulse {
+  0%,100% { box-shadow: 0 0 30px rgba(37,99,235,0.22); }
+  50%      { box-shadow: 0 0 52px rgba(5,109,255,0.40); }
+}
+@keyframes shimmer {
+  0%   { transform: translateX(150%); }
+  100% { transform: translateX(-150%); }
+}
+
+/* Staggered entrance */
+.anim-1 { animation: fadeUp .55s cubic-bezier(.22,1,.36,1) both 0.05s; }
+.anim-2 { animation: fadeUp .55s cubic-bezier(.22,1,.36,1) both 0.13s; }
+.anim-3 { animation: fadeUp .55s cubic-bezier(.22,1,.36,1) both 0.21s; }
+.anim-4 { animation: fadeUp .55s cubic-bezier(.22,1,.36,1) both 0.29s; }
+.anim-5 { animation: fadeUp .55s cubic-bezier(.22,1,.36,1) both 0.37s; }
+.anim-6 { animation: fadeUp .55s cubic-bezier(.22,1,.36,1) both 0.45s; }
+.anim-7 { animation: fadeUp .55s cubic-bezier(.22,1,.36,1) both 0.53s; }
+
+/* ── Glass Card System ───────────────────────────────────── */
+.glass-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-b);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.2s;
+}
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+.glass-card:hover {
+  background: var(--glass-h);
+}
+
+/* ── Switch: clear off/on states on dark background ──────── */
+[data-slot="switch"][data-state="unchecked"] {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+[data-slot="switch"][data-state="checked"] {
+  background-color: #2563eb;
+}
