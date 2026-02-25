@@ -476,7 +476,6 @@ export default function TransactionsPage() {
 
   const transactions = data?.data || [];
   const pagination = data?.pagination;
-  const total = pagination?.total || 0;
 
   return (
     <div className="space-y-5">
@@ -554,26 +553,14 @@ export default function TransactionsPage() {
                 />
               ))}
 
-              {/* Summary & Pagination */}
-              <div
-                className="rounded-xl px-4 py-3 flex items-center justify-between mt-2"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-              >
-                <p className="text-sm text-white/60">
-                  {total} עסקאות
-                  {' • '}
-                  הכנסות: {formatCurrency(transactions.filter((tx) => (tx as BusinessTransaction).type === 'income').reduce((s, tx) => s + Number(tx.amount), 0))}
-                  {' • '}
-                  הוצאות: {formatCurrency(transactions.filter((tx) => (tx as BusinessTransaction).type === 'expense').reduce((s, tx) => s + Number(tx.amount), 0))}
-                </p>
-                {(pagination?.pages || 0) > 1 && (
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>הקודם</Button>
-                    <span className="text-sm text-white/60 self-center">{page} / {pagination?.pages}</span>
-                    <Button variant="outline" size="sm" disabled={page === pagination?.pages} onClick={() => setPage(p => p + 1)}>הבא</Button>
-                  </div>
-                )}
-              </div>
+              {/* Pagination */}
+              {(pagination?.pages || 0) > 1 && (
+                <div className="flex gap-2 justify-center mt-3">
+                  <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>הקודם</Button>
+                  <span className="text-sm text-white/60 self-center">{page} / {pagination?.pages}</span>
+                  <Button variant="outline" size="sm" disabled={page === pagination?.pages} onClick={() => setPage(p => p + 1)}>הבא</Button>
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
@@ -641,19 +628,14 @@ export default function TransactionsPage() {
                 </table>
               </div>
 
-              {/* Summary & Pagination */}
-              <div className="bg-white/5 border-t border-white/10 px-4 py-3 flex items-center justify-between">
-                <p className="text-sm text-white/60">
-                  {total} עסקאות
-                </p>
-                {(pagination?.pages || 0) > 1 && (
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>הקודם</Button>
-                    <span className="text-sm text-white/60 self-center">{page} / {pagination?.pages}</span>
-                    <Button variant="outline" size="sm" disabled={page === pagination?.pages} onClick={() => setPage(p => p + 1)}>הבא</Button>
-                  </div>
-                )}
-              </div>
+              {/* Pagination */}
+              {(pagination?.pages || 0) > 1 && (
+                <div className="bg-white/5 border-t border-white/10 px-4 py-3 flex justify-center gap-2">
+                  <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>הקודם</Button>
+                  <span className="text-sm text-white/60 self-center">{page} / {pagination?.pages}</span>
+                  <Button variant="outline" size="sm" disabled={page === pagination?.pages} onClick={() => setPage(p => p + 1)}>הבא</Button>
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
