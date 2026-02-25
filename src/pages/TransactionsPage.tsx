@@ -59,7 +59,8 @@ const PAYMENT_STATUS_MAP = {
 // ── Month Options ─────────────────────────────────────────────────────────────
 
 function buildMonthOptions() {
-  const opts: { label: string; value: string }[] = [{ label: 'כל הזמן', value: '' }];
+  // "all" is a sentinel — Radix UI SelectItem cannot have value=""
+  const opts: { label: string; value: string }[] = [{ label: 'כל הזמן', value: 'all' }];
   const now = new Date();
   for (let i = 0; i < 18; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -419,14 +420,15 @@ export default function TransactionsPage() {
   const [tab, setTab] = useState<'business' | 'personal'>(tabParam || 'business');
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [month, setMonth] = useState('');
+  const [month, setMonth] = useState('all');
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(!!addParam);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteTab, setDeleteTab] = useState<'business' | 'personal'>('business');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const filters = { tab, search: search || undefined, type: typeFilter as 'income' | 'expense' | 'all', month: month || undefined, page };
+  const activeMonth = month === 'all' ? undefined : month;
+  const filters = { tab, search: search || undefined, type: typeFilter as 'income' | 'expense' | 'all', month: activeMonth, page };
   const { data, isLoading } = useTransactions(filters);
 
   const monthLabel = MONTH_OPTIONS.find(o => o.value === month)?.label ?? 'כל הזמן';
@@ -494,7 +496,7 @@ export default function TransactionsPage() {
               className="max-w-48 h-9 text-sm"
             />
             {/* Month filter */}
-            <Select value={month} onValueChange={(v) => { setMonth(v); setPage(1); }}>
+            <Select value={month} onValueChange={(v) => { setMonth(v || 'all'); setPage(1); }}>
               <SelectTrigger className="w-36 h-9 text-sm"><SelectValue placeholder="כל הזמן" /></SelectTrigger>
               <SelectContent>
                 {MONTH_OPTIONS.map(o => (
