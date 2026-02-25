@@ -61,8 +61,8 @@ export default function DonutChart({ segments, total, title = 'התפלגות ה
   return (
     <div className="glass-card p-4">
       <div className="flex items-center justify-between mb-4">
-        <span className="text-base font-extrabold">{title}</span>
-        <span className="text-sm font-bold" style={{ color: '#2563EB' }}>סה"כ: {formatCurrency(total)}</span>
+        <span className="text-xl font-extrabold">{title}</span>
+        <span className="text-base font-bold" style={{ color: '#2563EB' }}>סה"כ: {formatCurrency(total)}</span>
       </div>
       <div className="flex flex-col items-center gap-4">
         {/* SVG Donut */}
@@ -87,8 +87,8 @@ export default function DonutChart({ segments, total, title = 'התפלגות ה
           </svg>
           {/* Center label */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-base font-extrabold leading-none">{formatCurrency(total)}</span>
-            <span className="text-xs mt-0.5" style={{ color: 'var(--t2)' }}>סה"כ</span>
+            <span className="text-lg font-extrabold leading-none">{formatCurrency(total)}</span>
+            <span className="text-sm mt-0.5" style={{ color: 'var(--t2)' }}>סה"כ</span>
           </div>
         </div>
 
@@ -99,8 +99,8 @@ export default function DonutChart({ segments, total, title = 'התפלגות ה
             return (
               <div key={seg.label} className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: seg.color }} />
-                <span className="text-xs flex-1 truncate" style={{ color: 'var(--t2)' }}>{seg.label}</span>
-                <span className="text-xs font-extrabold" style={{ color: seg.color }}>{pct}%</span>
+                <span className="text-sm flex-1 truncate" style={{ color: 'var(--t2)' }}>{seg.label}</span>
+                <span className="text-sm font-extrabold" style={{ color: seg.color }}>{pct}%</span>
               </div>
             );
           })}

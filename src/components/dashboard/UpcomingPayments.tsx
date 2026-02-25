@@ -32,21 +32,21 @@ export default function UpcomingPayments({ upcomingPayments }: Props) {
 
   return (
     <div className="glass-card p-4">
-      <div className="mb-3">
-        <span className="text-base font-extrabold">📅 תשלומים צפויים</span>
+      <div className="mb-4">
+        <span className="text-xl font-extrabold">📅 תשלומים צפויים</span>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-3">
         <button
           onClick={() => setTab('in')}
-          className={`text-xs px-3 py-1 rounded-lg font-semibold transition-colors ${tab === 'in' ? 'bg-green-500/20 text-green-300' : 'text-white/40 hover:text-white/60'}`}
+          className={`text-sm px-3 py-1.5 rounded-lg font-semibold transition-colors ${tab === 'in' ? 'bg-green-500/20 text-green-300' : 'text-white/40 hover:text-white/60'}`}
         >
           צפוי להיכנס
         </button>
         <button
           onClick={() => setTab('out')}
-          className={`text-xs px-3 py-1 rounded-lg font-semibold transition-colors ${tab === 'out' ? 'bg-red-500/20 text-red-300' : 'text-white/40 hover:text-white/60'}`}
+          className={`text-sm px-3 py-1.5 rounded-lg font-semibold transition-colors ${tab === 'out' ? 'bg-red-500/20 text-red-300' : 'text-white/40 hover:text-white/60'}`}
         >
           צפוי לצאת
         </button>
@@ -55,24 +55,24 @@ export default function UpcomingPayments({ upcomingPayments }: Props) {
       <div className="space-y-2">
         {tab === 'in' && (
           incoming.length === 0 ? (
-            <p className="text-sm text-center py-6" style={{ color: 'var(--t2)' }}>אין תשלומים ממתינים</p>
+            <p className="text-base text-center py-6" style={{ color: 'var(--t2)' }}>אין תשלומים ממתינים</p>
           ) : incoming.map((tx) => (
             <div
               key={tx.id}
-              className="flex items-center gap-3 p-2.5 rounded-xl"
+              className="flex items-center gap-3 p-3 rounded-xl"
               style={{
                 background: 'rgba(0,196,140,0.06)',
                 border: '1px solid rgba(0,196,140,0.15)',
               }}
             >
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#00C48C' }} />
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: '#00C48C' }} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
+                <p className="text-base font-semibold truncate">
                   {tx.clients?.name || tx.description}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-xs" style={{ color: 'var(--t2)' }}>{tx.date}</p>
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
+                  <p className="text-sm" style={{ color: 'var(--t2)' }}>{tx.date}</p>
+                  <span className={`text-sm px-2 py-0.5 rounded-full font-semibold ${
                     tx.payment_status === 'overdue'
                       ? 'bg-red-500/20 text-red-300'
                       : 'bg-yellow-500/20 text-yellow-300'
@@ -81,7 +81,7 @@ export default function UpcomingPayments({ upcomingPayments }: Props) {
                   </span>
                 </div>
               </div>
-              <span className="text-sm font-bold flex-shrink-0 text-green-400">
+              <span className="text-base font-bold flex-shrink-0 text-green-400">
                 +{formatCurrency(tx.amount)}
               </span>
             </div>
@@ -90,27 +90,27 @@ export default function UpcomingPayments({ upcomingPayments }: Props) {
 
         {tab === 'out' && (
           outgoing.length === 0 ? (
-            <p className="text-sm text-center py-6" style={{ color: 'var(--t2)' }}>אין תשלומים יוצאים</p>
+            <p className="text-base text-center py-6" style={{ color: 'var(--t2)' }}>אין תשלומים יוצאים</p>
           ) : outgoing.map((p) => {
             const c = getColor(p.due_date);
             const days = daysUntil(p.due_date);
             return (
               <div
                 key={p.id}
-                className="flex items-center gap-3 p-2.5 rounded-xl"
+                className="flex items-center gap-3 p-3 rounded-xl"
                 style={{ background: c.bg, border: `1px solid ${c.border}` }}
               >
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.dot }} />
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: c.dot }} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{p.description}</p>
+                  <p className="text-base font-semibold truncate">{p.description}</p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-xs" style={{ color: c.dot }}>{formatRelativeDays(p.due_date)}</p>
+                    <p className="text-sm font-medium" style={{ color: c.dot }}>{formatRelativeDays(p.due_date)}</p>
                     {days < 3 && (
-                      <span className="text-xs text-orange-400 font-semibold">⚠️ בקרוב</span>
+                      <span className="text-sm text-orange-400 font-semibold">⚠️ בקרוב</span>
                     )}
                   </div>
                 </div>
-                <span className="text-sm font-bold flex-shrink-0 text-red-400">
+                <span className="text-base font-bold flex-shrink-0 text-red-400">
                   -{formatCurrency(p.amount)}
                 </span>
               </div>

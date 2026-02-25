@@ -6,9 +6,9 @@ interface SparkPoint { x: number; y: number; }
 
 interface Props {
   title: string;
-  value: string;         // pre-formatted string (used when rawValue is undefined)
-  rawValue?: number;     // enables count-up animation + runtime formatting
-  prefix?: string;       // e.g. "₪"
+  value: string;
+  rawValue?: number;
+  prefix?: string;
   subValue?: string;
   icon: ReactNode;
   trend?: 'up' | 'down' | 'neutral';
@@ -49,25 +49,25 @@ export default function KpiCard({
     <div className={cn('glass-card flex flex-col cursor-pointer p-4 hover:-translate-y-0.5 transition-transform', className)}>
       {/* Icon */}
       <div
-        className="flex items-center justify-center w-8 h-8 rounded-lg mb-3 text-sm flex-shrink-0"
+        className="flex items-center justify-center w-9 h-9 rounded-lg mb-3 flex-shrink-0"
         style={{ background: colors.icon }}
       >
         {icon}
       </div>
 
       {/* Label */}
-      <div className="text-[10px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--t2)' }}>
+      <div className="text-[15px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--t2)' }}>
         {title}
       </div>
 
       {/* Value */}
-      <div className="text-xl font-extrabold tracking-tight mb-1" style={{ color: colors.value }}>
+      <div className="text-[32px] font-extrabold tracking-tight leading-none mb-2" style={{ color: colors.value }}>
         {displayValue}
       </div>
 
       {/* Trend */}
       {trendLabel && (
-        <div className="text-[10px] font-bold flex items-center gap-0.5 mb-2" style={{ color: trendColor }}>
+        <div className="text-[15px] font-bold flex items-center gap-0.5 mb-2" style={{ color: trendColor }}>
           {trendIcon} {trendLabel}
         </div>
       )}

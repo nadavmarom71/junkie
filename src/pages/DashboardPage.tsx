@@ -1,6 +1,20 @@
 import { useState } from 'react';
 import { TrendingUp, TrendingDown, Repeat, BadgeDollarSign, DollarSign, ArrowDownLeft } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDashboardStats } from '@/hooks/useDashboard';
+
+function buildMonthOptions() {
+  const opts: { label: string; value: string }[] = [{ label: 'החודש הנוכחי', value: 'current' }];
+  const now = new Date();
+  for (let i = 1; i <= 17; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+    opts.push({ label, value });
+  }
+  return opts;
+}
+const MONTH_OPTIONS = buildMonthOptions();
 import KpiCard from '@/components/dashboard/KpiCard';
 import RevenueChart from '@/components/dashboard/RevenueChart';
 import ExpensesByCategoryChart from '@/components/dashboard/ExpensesByCategoryChart';
@@ -28,11 +42,13 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
-  const { data, isLoading, error } = useDashboardStats();
-
+  const [dashboardMonth, setDashboardMonth] = useState('current');
   const [activeTab, setActiveTab] = useState<'business' | 'personal'>(
     () => (localStorage.getItem('dashboard-tab') as 'business' | 'personal') ?? 'business'
   );
+
+  const activeMonthParam = dashboardMonth === 'current' ? undefined : dashboardMonth;
+  const { data, isLoading, error } = useDashboardStats(activeMonthParam);
 
   const handleTabChange = (tab: 'business' | 'personal') => {
     setActiveTab(tab);
@@ -58,9 +74,22 @@ export default function DashboardPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="anim-1">
-        <h1 className="text-2xl font-extrabold tracking-tight">שלום נדב 👋</h1>
-        <p className="text-base mt-0.5" style={{ color: 'var(--t2)' }}>הנה הסיכום הפיננסי שלך</p>
+      <div className="anim-1 flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight">שלום נדב 👋</h1>
+          <p className="text-base mt-0.5" style={{ color: 'var(--t2)' }}>הנה הסיכום הפיננסי שלך</p>
+        </div>
+        {/* Month filter */}
+        <Select value={dashboardMonth} onValueChange={setDashboardMonth}>
+          <SelectTrigger className="w-44 h-9 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {MONTH_OPTIONS.map(o => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Tabs */}
@@ -143,19 +172,19 @@ export default function DashboardPage() {
           {/* 30-day Forecast */}
           {data.cashflow?.forecast && (
             <div className="rounded-xl p-4 mb-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <h3 className="text-sm font-bold mb-3" style={{ color: 'var(--t2)' }}>תזרים צפוי — 30 יום</h3>
+              <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--t2)' }}>תזרים צפוי — 30 יום</h3>
               <div className="flex gap-4">
                 <div className="flex-1 text-center">
-                  <div className="text-xs mb-1" style={{ color: 'var(--t2)' }}>צפוי להיכנס</div>
-                  <div className="text-base font-bold text-green-400">+₪{data.cashflow.forecast.expectedIn.toLocaleString('he-IL')}</div>
+                  <div className="text-sm font-semibold mb-1" style={{ color: 'var(--t2)' }}>צפוי להיכנס</div>
+                  <div className="text-2xl font-bold text-green-400">+₪{data.cashflow.forecast.expectedIn.toLocaleString('he-IL')}</div>
                 </div>
                 <div className="flex-1 text-center">
-                  <div className="text-xs mb-1" style={{ color: 'var(--t2)' }}>צפוי לצאת</div>
-                  <div className="text-base font-bold text-red-400">-₪{data.cashflow.forecast.expectedOut.toLocaleString('he-IL')}</div>
+                  <div className="text-sm font-semibold mb-1" style={{ color: 'var(--t2)' }}>צפוי לצאת</div>
+                  <div className="text-2xl font-bold text-red-400">-₪{data.cashflow.forecast.expectedOut.toLocaleString('he-IL')}</div>
                 </div>
                 <div className="flex-1 text-center">
-                  <div className="text-xs mb-1" style={{ color: 'var(--t2)' }}>יתרה צפויה</div>
-                  <div className={`text-base font-bold ${data.cashflow.forecast.balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className="text-sm font-semibold mb-1" style={{ color: 'var(--t2)' }}>יתרה צפויה</div>
+                  <div className={`text-2xl font-bold ${data.cashflow.forecast.balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {data.cashflow.forecast.balance >= 0 ? '+' : ''}₪{data.cashflow.forecast.balance.toLocaleString('he-IL')}
                   </div>
                 </div>

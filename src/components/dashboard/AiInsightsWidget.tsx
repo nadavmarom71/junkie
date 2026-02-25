@@ -15,19 +15,19 @@ export default function AiInsightsWidget({ insights }: Props) {
 
   return (
     <div className="glass-card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-extrabold">💡 תובנות AI</span>
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-xl font-extrabold">💡 תובנות AI</span>
         <button
-          className="text-[11px] font-medium"
+          className="text-base font-semibold"
           style={{ color: '#2563EB' }}
           onClick={() => navigate('/insights')}
         >
           הכל ←
         </button>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {insights.length === 0 ? (
-          <p className="text-sm text-center py-6" style={{ color: 'var(--t2)' }}>
+          <p className="text-base text-center py-6" style={{ color: 'var(--t2)' }}>
             אין תובנות חדשות
           </p>
         ) : insights.map((insight) => {
@@ -35,14 +35,14 @@ export default function AiInsightsWidget({ insights }: Props) {
           return (
             <div
               key={insight.id}
-              className="flex items-start gap-2.5 p-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-80"
+              className="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-opacity hover:opacity-80"
               style={{ background: s.bg, border: `1px solid ${s.border}` }}
               onClick={() => navigate('/insights')}
             >
-              <span className="text-sm flex-shrink-0 mt-0.5">{s.icon}</span>
+              <span className="text-base flex-shrink-0 mt-0.5">{s.icon}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold truncate text-white">{insight.title}</p>
-                <p className="text-[11px] mt-0.5 line-clamp-2" style={{ color: 'var(--t2)' }}>
+                <p className="text-base font-semibold truncate text-white">{insight.title}</p>
+                <p className="text-[14px] mt-0.5 line-clamp-2" style={{ color: 'var(--t2)' }}>
                   {insight.content}
                 </p>
               </div>
