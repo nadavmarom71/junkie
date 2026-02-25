@@ -8,6 +8,12 @@ export interface PaginatedResponse<T> {
     total: number;
     pages: number;
   };
+  totals?: {
+    income?: number;
+    expenses?: number;
+    net?: number;
+    total?: number;
+  };
 }
 
 // ── Clients ───────────────────────────────────────────────────────────────────

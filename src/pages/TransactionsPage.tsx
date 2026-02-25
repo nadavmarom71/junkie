@@ -56,26 +56,45 @@ const PAYMENT_STATUS_MAP = {
   overdue: { bg: 'bg-red-500/30',    text: 'text-red-300',    border: 'border border-red-500/50',    label: 'באיחור ⚠' },
 } as const;
 
+// ── Month Options ─────────────────────────────────────────────────────────────
+
+function buildMonthOptions() {
+  const opts: { label: string; value: string }[] = [{ label: 'כל הזמן', value: '' }];
+  const now = new Date();
+  for (let i = 0; i < 18; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+    opts.push({ label, value });
+  }
+  return opts;
+}
+
+const MONTH_OPTIONS = buildMonthOptions();
+
 // ── Transactions Summary Banner ───────────────────────────────────────────────
 
-function TransactionsSummaryBanner({ transactions, tab }: {
-  transactions: Array<BusinessTransaction | PersonalExpense>;
+function TransactionsSummaryBanner({
+  totals,
+  tab,
+  monthLabel,
+}: {
+  totals: { income?: number; expenses?: number; net?: number; total?: number };
   tab: 'business' | 'personal';
+  monthLabel: string;
 }) {
   if (tab === 'personal') {
-    const total = transactions.reduce((s, tx) => s + Number(tx.amount), 0);
     return (
       <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
-        <div className="text-xs mb-1 font-medium" style={{ color: 'var(--t2)' }}>סה״כ הוצאות אישיות</div>
-        <div className="text-base font-extrabold text-red-400">-{formatCurrency(total)}</div>
+        <div className="text-xs mb-1 font-medium" style={{ color: 'var(--t2)' }}>סה״כ הוצאות אישיות — {monthLabel}</div>
+        <div className="text-base font-extrabold text-red-400">-{formatCurrency(totals.total ?? 0)}</div>
       </div>
     );
   }
 
-  const bTxs = transactions as BusinessTransaction[];
-  const income   = bTxs.filter(tx => tx.type === 'income').reduce((s, tx) => s + Number(tx.amount), 0);
-  const expenses = bTxs.filter(tx => tx.type === 'expense').reduce((s, tx) => s + Number(tx.amount), 0);
-  const net      = income - expenses;
+  const income   = totals.income   ?? 0;
+  const expenses = totals.expenses ?? 0;
+  const net      = totals.net      ?? (income - expenses);
 
   return (
     <div
@@ -83,7 +102,7 @@ function TransactionsSummaryBanner({ transactions, tab }: {
       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
     >
       <span className="text-sm font-bold" style={{ color: 'var(--t2)' }}>
-        סיכום פיננסי — {new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}
+        סיכום פיננסי — {monthLabel}
       </span>
       <div className="grid grid-cols-3 gap-3 mt-3">
         <div className="text-center">
@@ -400,14 +419,17 @@ export default function TransactionsPage() {
   const [tab, setTab] = useState<'business' | 'personal'>(tabParam || 'business');
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [month, setMonth] = useState('');
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(!!addParam);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteTab, setDeleteTab] = useState<'business' | 'personal'>('business');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const filters = { tab, search: search || undefined, type: typeFilter as 'income' | 'expense' | 'all', page };
+  const filters = { tab, search: search || undefined, type: typeFilter as 'income' | 'expense' | 'all', month: month || undefined, page };
   const { data, isLoading } = useTransactions(filters);
+
+  const monthLabel = MONTH_OPTIONS.find(o => o.value === month)?.label ?? 'כל הזמן';
   const deleteBusinessTx = useDeleteTransaction();
   const deletePersonalTx = useDeletePersonalExpense();
 
@@ -453,8 +475,8 @@ export default function TransactionsPage() {
       </div>
 
       {/* Financial Summary Banner */}
-      {!isLoading && transactions.length > 0 && (
-        <TransactionsSummaryBanner transactions={transactions as Array<BusinessTransaction | PersonalExpense>} tab={tab} />
+      {!isLoading && data?.totals && (
+        <TransactionsSummaryBanner totals={data.totals} tab={tab} monthLabel={monthLabel} />
       )}
 
       <Tabs value={tab} onValueChange={(v) => { setTab(v as 'business' | 'personal'); setPage(1); setExpandedId(null); }}>
@@ -471,6 +493,15 @@ export default function TransactionsPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-48 h-9 text-sm"
             />
+            {/* Month filter */}
+            <Select value={month} onValueChange={(v) => { setMonth(v); setPage(1); }}>
+              <SelectTrigger className="w-36 h-9 text-sm"><SelectValue placeholder="כל הזמן" /></SelectTrigger>
+              <SelectContent>
+                {MONTH_OPTIONS.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {tab === 'business' && (
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="w-32 h-9 text-sm"><SelectValue /></SelectTrigger>

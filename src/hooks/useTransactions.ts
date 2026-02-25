@@ -17,6 +17,7 @@ export interface TransactionFilters {
   search?: string;
   from?: string;
   to?: string;
+  month?: string; // e.g. "2026-02"
   page?: number;
   limit?: number;
   sort?: string;
