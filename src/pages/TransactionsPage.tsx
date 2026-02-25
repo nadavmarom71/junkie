@@ -78,17 +78,38 @@ const MONTH_OPTIONS = buildMonthOptions();
 function TransactionsSummaryBanner({
   totals,
   tab,
-  monthLabel,
+  month,
+  onMonthChange,
 }: {
   totals: { income?: number; expenses?: number; net?: number; total?: number };
   tab: 'business' | 'personal';
-  monthLabel: string;
+  month: string;
+  onMonthChange: (v: string) => void;
 }) {
+  const monthSelect = (
+    <Select value={month} onValueChange={onMonthChange}>
+      <SelectTrigger
+        className="h-auto gap-1 text-lg font-bold focus:ring-0 focus:ring-offset-0"
+        style={{ border: 'none', background: 'transparent', padding: 0, boxShadow: 'none', color: 'var(--t2)' }}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {MONTH_OPTIONS.map(o => (
+          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
   if (tab === 'personal') {
     return (
       <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
-        <div className="text-xs mb-1 font-medium" style={{ color: 'var(--t2)' }}>סה״כ הוצאות אישיות — {monthLabel}</div>
-        <div className="text-base font-extrabold text-red-400">-{formatCurrency(totals.total ?? 0)}</div>
+        <div className="flex items-center gap-1 mb-2" style={{ color: 'var(--t2)' }}>
+          <span className="text-lg font-bold">סה״כ הוצאות אישיות —</span>
+          {monthSelect}
+        </div>
+        <div className="text-2xl font-extrabold text-red-400">-{formatCurrency(totals.total ?? 0)}</div>
       </div>
     );
   }
@@ -102,17 +123,18 @@ function TransactionsSummaryBanner({
       className="rounded-2xl p-4 md:p-5"
       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
     >
-      <span className="text-sm font-bold" style={{ color: 'var(--t2)' }}>
-        סיכום פיננסי — {monthLabel}
-      </span>
-      <div className="grid grid-cols-3 gap-3 mt-3">
+      <div className="flex items-center gap-1 mb-4" style={{ color: 'var(--t2)' }}>
+        <span className="text-lg font-bold">סיכום פיננסי —</span>
+        {monthSelect}
+      </div>
+      <div className="grid grid-cols-3 gap-3">
         <div className="text-center">
-          <div className="text-xs mb-1 font-medium" style={{ color: 'var(--t2)' }}>הכנסות</div>
-          <div className="text-base font-extrabold text-green-400">+{formatCurrency(income)}</div>
+          <div className="text-sm mb-1 font-medium" style={{ color: 'var(--t2)' }}>הכנסות</div>
+          <div className="text-2xl font-extrabold text-green-400">+{formatCurrency(income)}</div>
         </div>
         <div className="text-center">
-          <div className="text-xs mb-1 font-medium" style={{ color: 'var(--t2)' }}>הוצאות</div>
-          <div className="text-base font-extrabold text-red-400">-{formatCurrency(expenses)}</div>
+          <div className="text-sm mb-1 font-medium" style={{ color: 'var(--t2)' }}>הוצאות</div>
+          <div className="text-2xl font-extrabold text-red-400">-{formatCurrency(expenses)}</div>
         </div>
         <div
           className="text-center rounded-xl p-2"
@@ -121,8 +143,8 @@ function TransactionsSummaryBanner({
             border: `1px solid ${net >= 0 ? 'rgba(0,196,140,0.2)' : 'rgba(244,63,94,0.2)'}`,
           }}
         >
-          <div className="text-xs mb-1 font-bold" style={{ color: 'var(--t2)' }}>נטו</div>
-          <div className={`text-base font-extrabold ${net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <div className="text-sm mb-1 font-bold" style={{ color: 'var(--t2)' }}>נטו</div>
+          <div className={`text-2xl font-extrabold ${net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {net >= 0 ? '+' : ''}{formatCurrency(net)}
           </div>
         </div>
@@ -431,7 +453,6 @@ export default function TransactionsPage() {
   const filters = { tab, search: search || undefined, type: typeFilter as 'income' | 'expense' | 'all', month: activeMonth, page };
   const { data, isLoading } = useTransactions(filters);
 
-  const monthLabel = MONTH_OPTIONS.find(o => o.value === month)?.label ?? 'כל הזמן';
   const deleteBusinessTx = useDeleteTransaction();
   const deletePersonalTx = useDeletePersonalExpense();
 
@@ -478,7 +499,12 @@ export default function TransactionsPage() {
 
       {/* Financial Summary Banner */}
       {!isLoading && data?.totals && (
-        <TransactionsSummaryBanner totals={data.totals} tab={tab} monthLabel={monthLabel} />
+        <TransactionsSummaryBanner
+          totals={data.totals}
+          tab={tab}
+          month={month}
+          onMonthChange={(v) => { setMonth(v); setPage(1); }}
+        />
       )}
 
       <Tabs value={tab} onValueChange={(v) => { setTab(v as 'business' | 'personal'); setPage(1); setExpandedId(null); }}>
@@ -495,15 +521,6 @@ export default function TransactionsPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-48 h-9 text-sm"
             />
-            {/* Month filter */}
-            <Select value={month} onValueChange={(v) => { setMonth(v || 'all'); setPage(1); }}>
-              <SelectTrigger className="w-36 h-9 text-sm"><SelectValue placeholder="כל הזמן" /></SelectTrigger>
-              <SelectContent>
-                {MONTH_OPTIONS.map(o => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             {tab === 'business' && (
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="w-32 h-9 text-sm"><SelectValue /></SelectTrigger>
