@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Download } from 'lucide-react';
+import { Plus, Download, ChevronDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import {
   useCreatePersonalExpense,
   useDeleteTransaction,
   useDeletePersonalExpense,
+  useUpdatePaymentStatus,
 } from '@/hooks/useTransactions';
 import { formatCurrency, formatDateShort } from '@/lib/formatters';
 import { useForm } from 'react-hook-form';
@@ -48,6 +49,19 @@ type PersonalForm = z.infer<typeof personalSchema>;
 
 const BUSINESS_CATEGORIES = ['ריטיינרים', 'פרויקטים', 'כלים ותוכנות', 'שיווק ופרסום', 'משרד ושכירות', 'נסיעות ותחבורה', 'ייעוץ ושירותים', 'ציוד וחומרה', 'משכורות ושכר', 'ביטוח', 'אחר'];
 const PERSONAL_CATEGORIES = ['מזון ומשקאות', 'קניות ובגדים', 'בריאות ורפואה', 'בידור ופנאי', 'תחבורה', 'חשבונות ושירותים', 'חינוך', 'נסיעות', 'אחר'];
+
+// ── Payment Status Badge ───────────────────────────────────────────────────────
+
+function PaymentStatusBadge({ status }: { status?: string }) {
+  if (!status || status === 'paid') return null;
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+      status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-red-500/20 text-red-300'
+    }`}>
+      {status === 'pending' ? 'ממתין' : 'באיחור'}
+    </span>
+  );
+}
 
 // ── Transaction Form ──────────────────────────────────────────────────────────
 
@@ -173,38 +187,137 @@ function PersonalExpenseForm({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── Transaction Row ────────────────────────────────────────────────────────────
+// ── Personal Transaction Card (mobile + desktop for personal tab) ──────────────────────────────────────────────────
 
-function TransactionRow({ tx, tab, onDelete }: { tx: BusinessTransaction | PersonalExpense; tab: string; onDelete: (id: string) => void }) {
+function TransactionCard({ tx, tab, onDelete }: { tx: BusinessTransaction | PersonalExpense; tab: string; onDelete: (id: string) => void }) {
   const isBusiness = tab === 'business';
   const bTx = tx as BusinessTransaction;
+  const isIncome = isBusiness && bTx.type === 'income';
 
   return (
-    <tr className="hover:bg-white/5 transition-colors">
-      <td className="px-4 py-3 text-sm text-white/60">{formatDateShort(tx.date)}</td>
-      {isBusiness && (
-        <td className="px-4 py-3">
-          <Badge variant={bTx.type === 'income' ? 'default' : 'destructive'} className="text-xs">
-            {bTx.type === 'income' ? 'הכנסה' : 'הוצאה'}
+    <div className="px-4 py-3 border-b border-white/10 last:border-0">
+      {/* Top row: type badge + amount */}
+      <div className="flex items-center justify-between mb-1.5">
+        <span className={`text-lg font-bold ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
+          {isIncome ? '+' : '-'}{formatCurrency(tx.amount)}
+        </span>
+        {isBusiness ? (
+          <Badge variant={isIncome ? 'default' : 'destructive'} className="text-sm px-3">
+            {isIncome ? 'הכנסה' : 'הוצאה'}
           </Badge>
-        </td>
-      )}
-      <td className="px-4 py-3 text-sm text-white max-w-48 truncate">{tx.description}</td>
-      <td className="px-4 py-3">
-        <Badge variant="outline" className="text-xs">{tx.category}</Badge>
-      </td>
-      <td className={`px-4 py-3 text-sm font-semibold ${isBusiness && bTx.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
-        {isBusiness && bTx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
-      </td>
-      <td className="px-4 py-3">
-        <button
-          onClick={() => onDelete(tx.id)}
-          className="text-xs text-red-500 hover:text-red-700 hover:underline"
-        >
+        ) : (
+          <Badge variant="destructive" className="text-sm px-3">הוצאה אישית</Badge>
+        )}
+      </div>
+      {/* Description */}
+      <p className="text-base text-white font-medium truncate mb-1.5">{tx.description}</p>
+      {/* Bottom row: category + date + delete */}
+      <div className="flex items-center justify-between">
+        <button onClick={() => onDelete(tx.id)} className="text-sm text-red-500 hover:text-red-400">
           מחק
         </button>
-      </td>
-    </tr>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-white/50">{formatDateShort(tx.date)}</span>
+          <Badge variant="outline" className="text-sm">{tx.category}</Badge>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Expandable Business Transaction Card ──────────────────────────────────────
+
+function ExpandableTransactionCard({
+  tx,
+  expanded,
+  onToggle,
+  onDelete,
+}: {
+  tx: BusinessTransaction;
+  expanded: boolean;
+  onToggle: () => void;
+  onDelete: (id: string) => void;
+}) {
+  const updatePaymentStatus = useUpdatePaymentStatus();
+  const isIncome = tx.type === 'income';
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden mb-2 cursor-pointer"
+      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+      onClick={onToggle}
+    >
+      <div className="flex items-center justify-between px-4 py-3">
+        {/* Right side: date + description */}
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-sm font-semibold text-white/50 flex-shrink-0">{formatDateShort(tx.date)}</span>
+          <span className="text-sm font-medium truncate">{tx.description}</span>
+          {tx.clients?.name && (
+            <span className="text-xs text-white/40 truncate hidden sm:block">— {tx.clients.name}</span>
+          )}
+        </div>
+        {/* Left side: amount + status badge + expand icon */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`text-base font-bold ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
+            {isIncome ? '+' : '-'}₪{Number(tx.amount).toLocaleString('he-IL')}
+          </span>
+          <PaymentStatusBadge status={tx.payment_status} />
+          <ChevronDown className={`h-4 w-4 text-white/30 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </div>
+      </div>
+
+      {/* Expanded panel */}
+      {expanded && (
+        <div
+          className="px-4 pb-4 pt-1"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex flex-wrap gap-2 items-center mb-3">
+            <span className="text-xs text-white/50">קטגוריה:</span>
+            <span className="text-sm">{tx.category}</span>
+            {tx.notes && (
+              <>
+                <span className="text-xs text-white/50 mr-2">הערות:</span>
+                <span className="text-sm">{tx.notes}</span>
+              </>
+            )}
+          </div>
+          {/* Payment status toggle (only for income) */}
+          {isIncome && (
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'paid' }); }}
+                className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'paid' ? 'bg-green-500/30 text-green-300 border border-green-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
+              >
+                שולם ✅
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'pending' }); }}
+                className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'pending' ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
+              >
+                ממתין 🟡
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'overdue' }); }}
+                className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'overdue' ? 'bg-red-500/30 text-red-300 border border-red-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
+              >
+                באיחור 🔴
+              </button>
+            </div>
+          )}
+          {/* Delete button */}
+          <div className="mt-3 flex justify-end">
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(tx.id); }}
+              className="text-xs text-red-400 hover:text-red-300 font-medium"
+            >
+              מחק
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -222,6 +335,7 @@ export default function TransactionsPage() {
   const [createOpen, setCreateOpen] = useState(!!addParam);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteTab, setDeleteTab] = useState<'business' | 'personal'>('business');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filters = { tab, search: search || undefined, type: typeFilter as 'income' | 'expense' | 'all', page };
   const { data, isLoading } = useTransactions(filters);
@@ -269,7 +383,7 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => { setTab(v as 'business' | 'personal'); setPage(1); }}>
+      <Tabs value={tab} onValueChange={(v) => { setTab(v as 'business' | 'personal'); setPage(1); setExpandedId(null); }}>
         <div className="flex items-center gap-4 flex-wrap">
           <TabsList>
             <TabsTrigger value="business">עסקי</TabsTrigger>
@@ -296,61 +410,129 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-        {['business', 'personal'].map((t) => (
-          <TabsContent key={t} value={t}>
-            {isLoading ? (
-              <div className="space-y-2 mt-4">
-                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12" />)}
-              </div>
-            ) : transactions.length === 0 ? (
-              <EmptyState icon="📋" title="אין עסקאות" description="הוסף עסקה חדשה לתחילת המעקב" />
-            ) : (
-              <div className="mt-4 rounded-lg border border-white/10 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-right">
-                    <thead className="bg-white/5 border-b border-white/10">
-                      <tr>
-                        <th className="px-4 py-3 text-xs font-semibold text-white/50 uppercase">תאריך</th>
-                        {t === 'business' && <th className="px-4 py-3 text-xs font-semibold text-white/50 uppercase">סוג</th>}
-                        <th className="px-4 py-3 text-xs font-semibold text-white/50 uppercase">תיאור</th>
-                        <th className="px-4 py-3 text-xs font-semibold text-white/50 uppercase">קטגוריה</th>
-                        <th className="px-4 py-3 text-xs font-semibold text-white/50 uppercase">סכום</th>
-                        <th className="px-4 py-3 text-xs font-semibold text-white/50 uppercase"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-transparent divide-y divide-white/10">
-                      {transactions.map((tx) => (
-                        <TransactionRow key={tx.id} tx={tx} tab={t} onDelete={handleDelete} />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+        {/* Business Tab — expandable card list */}
+        <TabsContent value="business">
+          {isLoading ? (
+            <div className="space-y-2 mt-4">
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12" />)}
+            </div>
+          ) : transactions.length === 0 ? (
+            <EmptyState icon="📋" title="אין עסקאות" description="הוסף עסקה חדשה לתחילת המעקב" />
+          ) : (
+            <div className="mt-4">
+              {transactions.map((tx) => (
+                <ExpandableTransactionCard
+                  key={tx.id}
+                  tx={tx as BusinessTransaction}
+                  expanded={expandedId === tx.id}
+                  onToggle={() => setExpandedId(expandedId === tx.id ? null : tx.id)}
+                  onDelete={handleDelete}
+                />
+              ))}
 
-                {/* Summary & Pagination */}
-                <div className="bg-white/5 border-t border-white/10 px-4 py-3 flex items-center justify-between">
-                  <p className="text-sm text-white/60">
-                    {total} עסקאות
-                    {t === 'business' && (
-                      <>
-                        {' • '}
-                        הכנסות: {formatCurrency(transactions.filter((tx) => (tx as BusinessTransaction).type === 'income').reduce((s, tx) => s + Number(tx.amount), 0))}
-                        {' • '}
-                        הוצאות: {formatCurrency(transactions.filter((tx) => (tx as BusinessTransaction).type === 'expense').reduce((s, tx) => s + Number(tx.amount), 0))}
-                      </>
-                    )}
-                  </p>
-                  {(pagination?.pages || 0) > 1 && (
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>הקודם</Button>
-                      <span className="text-sm text-white/60 self-center">{page} / {pagination?.pages}</span>
-                      <Button variant="outline" size="sm" disabled={page === pagination?.pages} onClick={() => setPage(p => p + 1)}>הבא</Button>
-                    </div>
-                  )}
-                </div>
+              {/* Summary & Pagination */}
+              <div
+                className="rounded-xl px-4 py-3 flex items-center justify-between mt-2"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <p className="text-sm text-white/60">
+                  {total} עסקאות
+                  {' • '}
+                  הכנסות: {formatCurrency(transactions.filter((tx) => (tx as BusinessTransaction).type === 'income').reduce((s, tx) => s + Number(tx.amount), 0))}
+                  {' • '}
+                  הוצאות: {formatCurrency(transactions.filter((tx) => (tx as BusinessTransaction).type === 'expense').reduce((s, tx) => s + Number(tx.amount), 0))}
+                </p>
+                {(pagination?.pages || 0) > 1 && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>הקודם</Button>
+                    <span className="text-sm text-white/60 self-center">{page} / {pagination?.pages}</span>
+                    <Button variant="outline" size="sm" disabled={page === pagination?.pages} onClick={() => setPage(p => p + 1)}>הבא</Button>
+                  </div>
+                )}
               </div>
-            )}
-          </TabsContent>
-        ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Personal Tab — original table/card layout unchanged */}
+        <TabsContent value="personal">
+          {isLoading ? (
+            <div className="space-y-2 mt-4">
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12" />)}
+            </div>
+          ) : transactions.length === 0 ? (
+            <EmptyState icon="📋" title="אין עסקאות" description="הוסף עסקה חדשה לתחילת המעקב" />
+          ) : (
+            <div className="mt-4 rounded-lg border border-white/10 overflow-hidden">
+              {/* Mobile: card list */}
+              <div className="sm:hidden divide-y divide-white/10">
+                {transactions.map((tx) => (
+                  <TransactionCard key={tx.id} tx={tx} tab="personal" onDelete={handleDelete} />
+                ))}
+              </div>
+
+              {/* Desktop: table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-right">
+                  <thead className="bg-white/5 border-b border-white/10">
+                    <tr>
+                      <th className="px-4 py-3 text-sm font-semibold text-white/50 uppercase">תאריך</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-white/50 uppercase">קטגוריה</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-white/50 uppercase">תיאור</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-white/50 uppercase">סכום</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-white/50 uppercase">סוג</th>
+                      <th className="px-4 py-3 text-sm font-semibold text-white/50 uppercase"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-transparent divide-y divide-white/10">
+                    {transactions.map((tx) => {
+                      const isIncome = false; // personal expenses are always expenses
+                      return (
+                        <tr key={tx.id} className="hover:bg-white/5 transition-colors">
+                          <td className="px-4 py-3 text-sm text-white/60">{formatDateShort(tx.date)}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className="text-sm">{tx.category}</Badge>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-white max-w-52 truncate">{tx.description}</td>
+                          <td className={`px-4 py-3 text-base font-bold ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
+                            -{Math.abs(Number(tx.amount)).toLocaleString('he-IL')}₪
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-medium border bg-red-500/20 text-red-300 border-red-500/30">
+                              הוצאה אישית
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => handleDelete(tx.id)}
+                              className="text-red-400 hover:text-red-300 text-sm font-medium"
+                            >
+                              מחק
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Summary & Pagination */}
+              <div className="bg-white/5 border-t border-white/10 px-4 py-3 flex items-center justify-between">
+                <p className="text-sm text-white/60">
+                  {total} עסקאות
+                </p>
+                {(pagination?.pages || 0) > 1 && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>הקודם</Button>
+                    <span className="text-sm text-white/60 self-center">{page} / {pagination?.pages}</span>
+                    <Button variant="outline" size="sm" disabled={page === pagination?.pages} onClick={() => setPage(p => p + 1)}>הבא</Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
 
       {/* Create Dialog */}

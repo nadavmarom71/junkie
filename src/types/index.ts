@@ -90,6 +90,7 @@ export interface BusinessTransaction {
   is_recurring: boolean;
   notes: string | null;
   source: TransactionSource;
+  payment_status: 'paid' | 'pending' | 'overdue';
   created_at: string;
   updated_at: string;
   // Joined
@@ -120,6 +121,7 @@ export interface CreateBusinessTransactionInput {
   retainer_id?: string | null;
   is_recurring?: boolean;
   notes?: string | null;
+  payment_status?: 'paid' | 'pending' | 'overdue';
 }
 
 export interface CreatePersonalExpenseInput {
@@ -160,6 +162,25 @@ export interface AiInsight {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
+export interface CashflowStats {
+  totalRevenue: number;
+  actualReceived: number;
+  paidExpenses: number;
+  netCashflow: number;
+  forecast: {
+    expectedIn: number;
+    expectedOut: number;
+    balance: number;
+  };
+}
+
+export interface PersonalStats {
+  thisMonth: number;
+  lastMonth: number;
+  change: string | null;
+  byCategory: Array<{ category: string; amount: number }>;
+}
+
 export interface DashboardStats {
   kpis: {
     monthlyRevenue: number;
@@ -167,12 +188,17 @@ export interface DashboardStats {
     netProfit: number;
     activeRetainerTotal: number;
   };
+  cashflow: CashflowStats;
+  personal: PersonalStats;
   charts: {
     monthly: Array<{ month: string; income: number; expenses: number }>;
     categories: Array<{ category: string; amount: number }>;
   };
   insights: AiInsight[];
-  upcomingPayments: ScheduledPayment[];
+  upcomingPayments: {
+    incoming: Array<BusinessTransaction & { clients?: { name: string } | null }>;
+    outgoing: ScheduledPayment[];
+  };
 }
 
 // ── Scheduled Payments ────────────────────────────────────────────────────────

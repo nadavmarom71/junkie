@@ -102,3 +102,16 @@ export function useDeletePersonalExpense() {
     onSuccess: () => invalidateDashboard(qc),
   });
 }
+
+export function useUpdatePaymentStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payment_status }: { id: string; payment_status: 'paid' | 'pending' | 'overdue' }) =>
+      api.patch(`/transactions/${id}/payment-status`, { payment_status }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['collections'] });
+    },
+  });
+}

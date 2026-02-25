@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, Lightbulb, Users,
-  TrendingUp, FileText, Repeat, Settings,
+  TrendingUp, FileText, Repeat, Settings, X, Banknote,
 } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { cn } from '@/lib/utils';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { to: '/',             icon: LayoutDashboard, label: 'לוח מחוונים' },
   { to: '/transactions', icon: ArrowLeftRight,   label: 'עסקאות' },
+  { to: '/collections',  icon: Banknote,         label: 'גבייה' },
   { to: '/insights',     icon: Lightbulb,        label: 'תובנות AI' },
   { to: '/clients',      icon: Users,            label: 'לקוחות' },
   { to: '/retainers',    icon: Repeat,           label: 'ריטיינרים' },
@@ -19,6 +20,7 @@ const navItems = [
 
 export default function Sidebar() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
+  const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
 
   return (
     <aside
@@ -27,7 +29,7 @@ export default function Sidebar() {
         sidebarOpen ? 'translate-x-0' : 'translate-x-full'
       )}
       style={{
-        background: 'rgba(255,255,255,0.025)',
+        background: '#0D1117',
         borderLeft: '1px solid rgba(255,255,255,0.07)',
       }}
     >
@@ -45,10 +47,18 @@ export default function Sidebar() {
         >
           💰
         </div>
-        <div>
-          <div className="text-[17px] font-extrabold text-white leading-tight">Junkie</div>
-          <div className="text-[11px]" style={{ color: 'var(--t2)' }}>ניהול פיננסי — נדב</div>
+        <div className="flex-1">
+          <div className="text-lg font-extrabold text-white leading-tight">Junkie</div>
+          <div className="text-xs" style={{ color: 'var(--t2)' }}>ניהול פיננסי — נדב</div>
         </div>
+        <button
+          onClick={() => setSidebarOpen(false)}
+          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0"
+          style={{ color: 'var(--t2)' }}
+          aria-label="סגור תפריט"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Nav */}
@@ -58,7 +68,7 @@ export default function Sidebar() {
             key={to}
             to={to}
             end={to === '/'}
-            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all"
+            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
             style={({ isActive }) =>
               isActive
                 ? { background: 'rgba(37,99,235,0.15)', color: '#fff', fontWeight: 600 }
