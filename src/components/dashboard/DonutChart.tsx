@@ -60,17 +60,17 @@ export default function DonutChart({ segments, total, title = 'התפלגות ה
 
   return (
     <div className="glass-card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-extrabold">{title}</span>
-        <span className="text-[11px]" style={{ color: '#2563EB' }}>לפי קטגוריה</span>
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-base font-extrabold">{title}</span>
+        <span className="text-sm font-bold" style={{ color: '#2563EB' }}>סה"כ: {formatCurrency(total)}</span>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col items-center gap-4">
         {/* SVG Donut */}
         <div className="relative flex-shrink-0">
-          <svg ref={svgRef} viewBox="0 0 100 100" width="108" height="108">
+          <svg ref={svgRef} viewBox="0 0 100 100" width="160" height="160">
             {/* Track */}
             <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="9" />
-            {/* Segments — start at 0 width, animated by JS above */}
+            {/* Segments */}
             {segments.map((seg, i) => (
               <circle
                 key={seg.label}
@@ -87,21 +87,20 @@ export default function DonutChart({ segments, total, title = 'התפלגות ה
           </svg>
           {/* Center label */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[13px] font-extrabold leading-none">{formatCurrency(total)}</span>
-            <span className="text-[8px] mt-0.5" style={{ color: 'var(--t2)' }}>סה"כ</span>
+            <span className="text-base font-extrabold leading-none">{formatCurrency(total)}</span>
+            <span className="text-xs mt-0.5" style={{ color: 'var(--t2)' }}>סה"כ</span>
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="flex-1 min-w-0">
+        {/* Legend — 2-column grid */}
+        <div className="w-full grid grid-cols-2 gap-x-4 gap-y-1.5">
           {segments.map(seg => {
-            const pct = Math.round((seg.amount / total) * 100);
+            const pct = total > 0 ? Math.round((seg.amount / total) * 100) : 0;
             return (
-              <div key={seg.label} className="flex items-center gap-2 py-[3px]">
-                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: seg.color }} />
-                <span className="text-[11px] flex-1 truncate" style={{ color: 'var(--t2)' }}>{seg.label}</span>
-                <span className="text-[9px]" style={{ color: 'var(--t3)' }}>{formatCurrency(seg.amount)}</span>
-                <span className="text-[12px] font-extrabold" style={{ color: seg.color }}>{pct}%</span>
+              <div key={seg.label} className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: seg.color }} />
+                <span className="text-xs flex-1 truncate" style={{ color: 'var(--t2)' }}>{seg.label}</span>
+                <span className="text-xs font-extrabold" style={{ color: seg.color }}>{pct}%</span>
               </div>
             );
           })}
