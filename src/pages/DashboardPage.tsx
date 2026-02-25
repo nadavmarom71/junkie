@@ -117,9 +117,9 @@ export default function DashboardPage() {
               sparkPoints={[{x:0,y:12},{x:23,y:14},{x:47,y:10},{x:70,y:8}]}
             />
             <KpiCard
-              title="הוצאות ששולמו"
+              title="הוצאות החודש"
               value=""
-              rawValue={data.cashflow?.paidExpenses ?? kpis.monthlyExpenses}
+              rawValue={data.cashflow?.totalExpenses ?? kpis.monthlyExpenses}
               prefix="₪"
               icon={<TrendingDown size={14} color="#F43F5E" />}
               trend="down"
@@ -128,7 +128,7 @@ export default function DashboardPage() {
               sparkPoints={[{x:0,y:14},{x:23,y:5},{x:47,y:15},{x:70,y:2}]}
             />
             <KpiCard
-              title="תזרים נקי"
+              title="רווח נקי"
               value=""
               rawValue={data.cashflow?.netCashflow ?? kpis.netProfit}
               prefix="₪"

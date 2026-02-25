@@ -170,9 +170,11 @@ export interface AiInsight {
 
 export interface CashflowStats {
   totalRevenue: number;
+  totalExpenses: number;
   actualReceived: number;
   paidExpenses: number;
   netCashflow: number;
+  netCash: number;
   forecast: {
     expectedIn: number;
     expectedOut: number;
