@@ -50,16 +50,17 @@ type PersonalForm = z.infer<typeof personalSchema>;
 const BUSINESS_CATEGORIES = ['ריטיינרים', 'פרויקטים', 'כלים ותוכנות', 'שיווק ופרסום', 'משרד ושכירות', 'נסיעות ותחבורה', 'ייעוץ ושירותים', 'ציוד וחומרה', 'משכורות ושכר', 'ביטוח', 'אחר'];
 const PERSONAL_CATEGORIES = ['מזון ומשקאות', 'קניות ובגדים', 'בריאות ורפואה', 'בידור ופנאי', 'תחבורה', 'חשבונות ושירותים', 'חינוך', 'נסיעות', 'אחר'];
 
+const PAYMENT_STATUS_MAP = {
+  paid:    { bg: 'bg-green-500/25',  text: 'text-green-300',  border: 'border border-green-500/40',  label: 'שולם ✓' },
+  pending: { bg: 'bg-yellow-500/25', text: 'text-yellow-200', border: 'border border-yellow-500/40', label: 'ממתין' },
+  overdue: { bg: 'bg-red-500/30',    text: 'text-red-300',    border: 'border border-red-500/50',    label: 'באיחור ⚠' },
+} as const;
+
 // ── Payment Status Badge ───────────────────────────────────────────────────────
 
 function PaymentStatusBadge({ status }: { status?: string }) {
   if (!status) return null;
-  const map = {
-    paid:    { bg: 'bg-green-500/25',  text: 'text-green-300',  border: 'border border-green-500/40',  label: 'שולם ✓' },
-    pending: { bg: 'bg-yellow-500/25', text: 'text-yellow-200', border: 'border border-yellow-500/40', label: 'ממתין' },
-    overdue: { bg: 'bg-red-500/30',    text: 'text-red-300',    border: 'border border-red-500/50',    label: 'באיחור ⚠' },
-  } as const;
-  const s = map[status as keyof typeof map];
+  const s = PAYMENT_STATUS_MAP[status as keyof typeof PAYMENT_STATUS_MAP];
   if (!s) return null;
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${s.bg} ${s.text} ${s.border}`}>
