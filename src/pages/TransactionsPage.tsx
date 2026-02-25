@@ -53,12 +53,17 @@ const PERSONAL_CATEGORIES = ['מזון ומשקאות', 'קניות ובגדים
 // ── Payment Status Badge ───────────────────────────────────────────────────────
 
 function PaymentStatusBadge({ status }: { status?: string }) {
-  if (!status || status === 'paid') return null;
+  if (!status) return null;
+  const map = {
+    paid:    { bg: 'bg-green-500/25',  text: 'text-green-300',  border: 'border border-green-500/40',  label: 'שולם ✓' },
+    pending: { bg: 'bg-yellow-500/25', text: 'text-yellow-200', border: 'border border-yellow-500/40', label: 'ממתין' },
+    overdue: { bg: 'bg-red-500/30',    text: 'text-red-300',    border: 'border border-red-500/50',    label: 'באיחור ⚠' },
+  } as const;
+  const s = map[status as keyof typeof map];
+  if (!s) return null;
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-      status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-red-500/20 text-red-300'
-    }`}>
-      {status === 'pending' ? 'ממתין' : 'באיחור'}
+    <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${s.bg} ${s.text} ${s.border}`}>
+      {s.label}
     </span>
   );
 }
@@ -262,6 +267,13 @@ function ExpandableTransactionCard({
             {isIncome ? '+' : '-'}₪{Number(tx.amount).toLocaleString('he-IL')}
           </span>
           <PaymentStatusBadge status={tx.payment_status} />
+          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+            tx.type === 'income'
+              ? 'bg-green-500/15 text-green-400 border border-green-500/25'
+              : 'bg-red-500/15 text-red-400 border border-red-500/25'
+          }`}>
+            {tx.type === 'income' ? 'הכנסה' : 'הוצאה'}
+          </span>
           <ChevronDown className={`h-4 w-4 text-white/30 transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
       </div>
