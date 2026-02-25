@@ -27,15 +27,12 @@ export function formatDate(date: string, locale = 'he-IL'): string {
 }
 
 /**
- * Format a date string to short Hebrew format (e.g. 22 פבר׳ 2026)
+ * Format a date string to DD/MM/YYYY format
  */
-export function formatDateShort(date: string, locale = 'he-IL'): string {
+export function formatDateShort(date: string): string {
   if (!date) return '';
-  return new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(date + 'T00:00:00'));
+  const [year, month, day] = date.split('T')[0].split('-');
+  return `${day}/${month}/${year}`;
 }
 
 /**
@@ -86,9 +83,9 @@ export function getSeverityVariant(severity: string): 'default' | 'secondary' | 
  */
 export function getSeverityDisplay(severity: string) {
   switch (severity) {
-    case 'critical': return { icon: '🚨', color: 'text-red-600', bg: 'bg-red-50 border-red-200' };
-    case 'warning': return { icon: '⚠️', color: 'text-yellow-700', bg: 'bg-yellow-50 border-yellow-200' };
-    case 'positive': return { icon: '✅', color: 'text-green-700', bg: 'bg-green-50 border-green-200' };
-    default: return { icon: '💡', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' };
+    case 'critical': return { icon: '🚨', color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/25' };
+    case 'warning':  return { icon: '⚠️', color: 'text-yellow-300', bg: 'bg-yellow-500/10 border-yellow-500/25' };
+    case 'positive': return { icon: '✅', color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/25' };
+    default:         return { icon: '💡', color: 'text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/25' };
   }
 }
