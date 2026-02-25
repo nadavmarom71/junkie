@@ -57,6 +57,64 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      {/* ── Financial Summary Banner ──────────────────────────────── */}
+      <div
+        className="rounded-2xl p-4 md:p-5"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-bold" style={{ color: 'var(--t2)' }}>סיכום פיננסי — {new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {/* 1. הכנסות עסקיות */}
+          <div className="text-center">
+            <div className="text-xs mb-1 font-medium" style={{ color: 'var(--t2)' }}>הכנסות עסקיות</div>
+            <div className="text-base font-extrabold text-green-400">
+              +₪{data.kpis.monthlyRevenue.toLocaleString('he-IL')}
+            </div>
+          </div>
+          {/* 2. הוצאות עסקיות */}
+          <div className="text-center">
+            <div className="text-xs mb-1 font-medium" style={{ color: 'var(--t2)' }}>הוצאות עסקיות</div>
+            <div className="text-base font-extrabold text-red-400">
+              -₪{data.kpis.monthlyExpenses.toLocaleString('he-IL')}
+            </div>
+          </div>
+          {/* 3. רווח עסקי */}
+          <div className="text-center">
+            <div className="text-xs mb-1 font-medium" style={{ color: 'var(--t2)' }}>רווח עסקי</div>
+            <div className={`text-base font-extrabold ${data.kpis.netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {data.kpis.netProfit >= 0 ? '+' : ''}₪{data.kpis.netProfit.toLocaleString('he-IL')}
+            </div>
+          </div>
+          {/* 4. הוצאות אישיות */}
+          <div className="text-center">
+            <div className="text-xs mb-1 font-medium" style={{ color: 'var(--t2)' }}>הוצאות אישיות</div>
+            <div className="text-base font-extrabold text-red-400">
+              -₪{(data.personal?.thisMonth ?? 0).toLocaleString('he-IL')}
+            </div>
+          </div>
+          {/* 5. שורה תחתונה */}
+          {(() => {
+            const bottomLine = data.kpis.netProfit - (data.personal?.thisMonth ?? 0);
+            return (
+              <div
+                className="text-center rounded-xl p-2 col-span-2 md:col-span-1"
+                style={{ background: bottomLine >= 0 ? 'rgba(0,196,140,0.08)' : 'rgba(244,63,94,0.08)', border: `1px solid ${bottomLine >= 0 ? 'rgba(0,196,140,0.2)' : 'rgba(244,63,94,0.2)'}` }}
+              >
+                <div className="text-xs mb-1 font-bold" style={{ color: 'var(--t2)' }}>שורה תחתונה 💰</div>
+                <div className={`text-lg font-extrabold ${bottomLine >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {bottomLine >= 0 ? '+' : ''}₪{bottomLine.toLocaleString('he-IL')}
+                </div>
+                <div className="text-xs mt-0.5 font-medium" style={{ color: 'var(--t2)' }}>
+                  אחרי הכל
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
       {/* Header */}
       <div className="anim-1">
         <h1 className="text-2xl font-extrabold tracking-tight">שלום נדב 👋</h1>
