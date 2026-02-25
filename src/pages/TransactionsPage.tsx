@@ -56,6 +56,61 @@ const PAYMENT_STATUS_MAP = {
   overdue: { bg: 'bg-red-500/30',    text: 'text-red-300',    border: 'border border-red-500/50',    label: 'באיחור ⚠' },
 } as const;
 
+// ── Transactions Summary Banner ───────────────────────────────────────────────
+
+function TransactionsSummaryBanner({ transactions, tab }: {
+  transactions: Array<BusinessTransaction | PersonalExpense>;
+  tab: 'business' | 'personal';
+}) {
+  if (tab === 'personal') {
+    const total = transactions.reduce((s, tx) => s + Number(tx.amount), 0);
+    return (
+      <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
+        <div className="text-xs mb-1 font-medium" style={{ color: 'var(--t2)' }}>סה״כ הוצאות אישיות</div>
+        <div className="text-base font-extrabold text-red-400">-{formatCurrency(total)}</div>
+      </div>
+    );
+  }
+
+  const bTxs = transactions as BusinessTransaction[];
+  const income   = bTxs.filter(tx => tx.type === 'income').reduce((s, tx) => s + Number(tx.amount), 0);
+  const expenses = bTxs.filter(tx => tx.type === 'expense').reduce((s, tx) => s + Number(tx.amount), 0);
+  const net      = income - expenses;
+
+  return (
+    <div
+      className="rounded-2xl p-4 md:p-5"
+      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
+    >
+      <span className="text-sm font-bold" style={{ color: 'var(--t2)' }}>
+        סיכום פיננסי — {new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}
+      </span>
+      <div className="grid grid-cols-3 gap-3 mt-3">
+        <div className="text-center">
+          <div className="text-xs mb-1 font-medium" style={{ color: 'var(--t2)' }}>הכנסות</div>
+          <div className="text-base font-extrabold text-green-400">+{formatCurrency(income)}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-xs mb-1 font-medium" style={{ color: 'var(--t2)' }}>הוצאות</div>
+          <div className="text-base font-extrabold text-red-400">-{formatCurrency(expenses)}</div>
+        </div>
+        <div
+          className="text-center rounded-xl p-2"
+          style={{
+            background: net >= 0 ? 'rgba(0,196,140,0.08)' : 'rgba(244,63,94,0.08)',
+            border: `1px solid ${net >= 0 ? 'rgba(0,196,140,0.2)' : 'rgba(244,63,94,0.2)'}`,
+          }}
+        >
+          <div className="text-xs mb-1 font-bold" style={{ color: 'var(--t2)' }}>נטו</div>
+          <div className={`text-base font-extrabold ${net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {net >= 0 ? '+' : ''}{formatCurrency(net)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Payment Status Badge ───────────────────────────────────────────────────────
 
 function PaymentStatusBadge({ status }: { status?: string }) {
@@ -253,21 +308,19 @@ function ExpandableTransactionCard({
       style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
       onClick={onToggle}
     >
-      <div className="flex items-center justify-between px-4 py-3">
-        {/* Right side: date + description */}
+      {/* Collapsed row — explicit RTL: text on RIGHT, controls on LEFT */}
+      <div className="flex items-center justify-between px-4 py-3" dir="rtl">
+        {/* RIGHT side (first in RTL flex): description + client + date */}
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-sm font-semibold text-white/50 flex-shrink-0">{formatDateShort(tx.date)}</span>
           <span className="text-sm font-medium truncate">{tx.description}</span>
           {tx.clients?.name && (
             <span className="text-xs text-white/40 truncate hidden sm:block">— {tx.clients.name}</span>
           )}
+          <span className="text-sm font-semibold text-white/50 flex-shrink-0">{formatDateShort(tx.date)}</span>
         </div>
-        {/* Left side: amount + status badge + expand icon */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className={`text-base font-bold ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
-            {isIncome ? '+' : '-'}₪{Number(tx.amount).toLocaleString('he-IL')}
-          </span>
-          <PaymentStatusBadge status={tx.payment_status} />
+        {/* LEFT side (second in RTL flex): chevron → type → status → amount (LTR order within group) */}
+        <div className="flex items-center gap-2 flex-shrink-0" dir="ltr">
+          <ChevronDown className={`h-4 w-4 text-white/30 transition-transform ${expanded ? 'rotate-180' : ''}`} />
           <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
             tx.type === 'income'
               ? 'bg-green-500/15 text-green-400 border border-green-500/25'
@@ -275,7 +328,10 @@ function ExpandableTransactionCard({
           }`}>
             {tx.type === 'income' ? 'הכנסה' : 'הוצאה'}
           </span>
-          <ChevronDown className={`h-4 w-4 text-white/30 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+          <PaymentStatusBadge status={tx.payment_status} />
+          <span className={`text-base font-bold ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
+            {isIncome ? '+' : '-'}₪{Number(tx.amount).toLocaleString('he-IL')}
+          </span>
         </div>
       </div>
 
@@ -395,6 +451,11 @@ export default function TransactionsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Financial Summary Banner */}
+      {!isLoading && transactions.length > 0 && (
+        <TransactionsSummaryBanner transactions={transactions as Array<BusinessTransaction | PersonalExpense>} tab={tab} />
+      )}
 
       <Tabs value={tab} onValueChange={(v) => { setTab(v as 'business' | 'personal'); setPage(1); setExpandedId(null); }}>
         <div className="flex items-center gap-4 flex-wrap">
