@@ -1,5 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import LoginPage from '@/pages/LoginPage';
 import AppLayout from '@/components/layout/AppLayout';
 import DashboardPage from '@/pages/DashboardPage';
 import TransactionsPage from '@/pages/TransactionsPage';
@@ -34,6 +36,17 @@ const router = createBrowserRouter([
 ]);
 
 export default function App() {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginPage />
+        <Toaster richColors position="bottom-left" />
+      </>
+    );
+  }
+
   return (
     <>
       <RouterProvider router={router} />

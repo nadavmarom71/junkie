@@ -13,7 +13,7 @@ interface Props {
   icon: ReactNode;
   trend?: 'up' | 'down' | 'neutral';
   trendLabel?: string;
-  variant?: 'success' | 'danger' | 'purple' | 'neutral';
+  variant?: 'success' | 'danger' | 'purple' | 'neutral' | 'warning';
   sparkPoints?: SparkPoint[];
   className?: string;
 }
@@ -23,6 +23,7 @@ const VARIANTS = {
   danger:  { value: '#F43F5E', icon: 'rgba(244,63,94,0.10)',   spark: 'rgba(244,63,94,0.7)' },
   purple:  { value: '#6aa3ff', icon: 'rgba(106,163,255,0.10)', spark: 'rgba(106,163,255,0.7)' },
   neutral: { value: '#FFFFFF', icon: 'rgba(255,255,255,0.07)', spark: 'rgba(255,255,255,0.4)' },
+  warning: { value: '#EAB308', icon: 'rgba(234,179,8,0.10)',   spark: 'rgba(234,179,8,0.7)'  },
 };
 
 const DEFAULT_POINTS: SparkPoint[] = [

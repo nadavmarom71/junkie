@@ -78,6 +78,7 @@
   html {
     direction: rtl;
     font-family: 'Discovery', 'Heebo', 'Arial', sans-serif;
+    font-size: 20px;
     background-color: var(--bg);
     color: var(--text);
   }
@@ -164,4 +165,10 @@
 }
 [data-slot="switch"][data-state="checked"] {
   background-color: #2563eb;
+}
+
+/* ── Floating UI: force opaque dark backgrounds ────────────── */
+[data-radix-popper-content-wrapper] > * {
+  background: #0D1117 !important;
+  border-color: rgba(255,255,255,0.10) !important;
 }

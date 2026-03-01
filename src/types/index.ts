@@ -97,6 +97,11 @@ export interface BusinessTransaction {
   notes: string | null;
   source: TransactionSource;
   payment_status: 'paid' | 'pending' | 'overdue';
+  partner_split_pct: number | null;
+  project_total: number | null;
+  expected_payment_date: string | null;
+  expected_date_unknown: boolean;
+  payment_schedule: Array<{ amount: number; date: string | null; unknown: boolean }> | null;
   created_at: string;
   updated_at: string;
   // Joined
@@ -128,6 +133,11 @@ export interface CreateBusinessTransactionInput {
   is_recurring?: boolean;
   notes?: string | null;
   payment_status?: 'paid' | 'pending' | 'overdue';
+  partner_split_pct?: number | null;
+  project_total?: number | null;
+  expected_payment_date?: string | null;
+  expected_date_unknown?: boolean;
+  payment_schedule?: Array<{ amount: number; date: string | null; unknown: boolean }> | null;
 }
 
 export interface CreatePersonalExpenseInput {
@@ -175,6 +185,7 @@ export interface CashflowStats {
   paidExpenses: number;
   netCashflow: number;
   netCash: number;
+  expectedCashFlow: number;
   forecast: {
     expectedIn: number;
     expectedOut: number;

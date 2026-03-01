@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, Repeat, BadgeDollarSign, DollarSign, ArrowDownLeft } from 'lucide-react';
+import { TrendingUp, TrendingDown, Repeat, BadgeDollarSign, DollarSign, ArrowDownLeft, Clock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDashboardStats } from '@/hooks/useDashboard';
 
 function buildMonthOptions() {
-  const opts: { label: string; value: string }[] = [{ label: 'החודש הנוכחי', value: 'current' }];
+  const opts: { label: string; value: string }[] = [
+    { label: 'החודש הנוכחי', value: 'current' },
+    { label: 'כל הזמנים', value: 'all' },
+  ];
   const now = new Date();
   for (let i = 1; i <= 17; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -122,7 +125,7 @@ export default function DashboardPage() {
       {activeTab === 'business' && (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 anim-2">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 anim-2">
             <KpiCard
               title="מחזור חודשי"
               value=""
@@ -166,6 +169,17 @@ export default function DashboardPage() {
               trendLabel={(data.cashflow?.netCashflow ?? kpis.netProfit) >= 0 ? 'חיובי' : 'שלילי'}
               variant={(data.cashflow?.netCashflow ?? kpis.netProfit) >= 0 ? 'success' : 'danger'}
               sparkPoints={[{x:0,y:16},{x:23,y:9},{x:47,y:9},{x:70,y:2}]}
+            />
+            <KpiCard
+              title="ממתין לגביה"
+              value=""
+              rawValue={data.cashflow?.expectedCashFlow ?? 0}
+              prefix="₪"
+              icon={<Clock size={14} color="#EAB308" />}
+              trend="neutral"
+              trendLabel="יתרות פתוחות"
+              variant="warning"
+              sparkPoints={[{x:0,y:8},{x:23,y:12},{x:47,y:6},{x:70,y:14}]}
             />
           </div>
 

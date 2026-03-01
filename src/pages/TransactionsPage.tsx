@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Download, ChevronDown } from 'lucide-react';
+import { Plus, Download, ChevronDown, Pencil, X as XIcon } from 'lucide-react';
+
+interface Installment { amount: string; date: string; unknown: boolean; }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +20,7 @@ import {
   useDeleteTransaction,
   useDeletePersonalExpense,
   useUpdatePaymentStatus,
+  useUpdateTransaction,
 } from '@/hooks/useTransactions';
 import { formatCurrency, formatDateShort } from '@/lib/formatters';
 import { useForm } from 'react-hook-form';
@@ -170,15 +173,49 @@ function PaymentStatusBadge({ status }: { status?: string }) {
 
 function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void; defaultType?: 'income' | 'expense' }) {
   const createMutation = useCreateTransaction();
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm({
+  const [partnerSplit, setPartnerSplit] = useState('');
+  const [projectTotal, setProjectTotal] = useState('');
+  const [installments, setInstallments] = useState<Installment[]>([]);
+
+  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(businessSchema),
     defaultValues: { type: defaultType || 'income', date: new Date().toISOString().split('T')[0] },
   });
 
+  const watchedType = watch('type');
+  const watchedAmount = watch('amount');
+  const isIncome = watchedType === 'income';
+  const balance = projectTotal !== '' && watchedAmount
+    ? Math.max(0, parseFloat(projectTotal) - Number(watchedAmount))
+    : 0;
+  const scheduledTotal = installments.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+
+  function addInstallment() {
+    const remaining = Math.max(0, balance - scheduledTotal);
+    setInstallments(prev => [...prev, { amount: remaining > 0 ? String(remaining) : '', date: '', unknown: false }]);
+  }
+  function removeInstallment(idx: number) { setInstallments(prev => prev.filter((_, i) => i !== idx)); }
+  function updateInstallment(idx: number, patch: Partial<Installment>) {
+    setInstallments(prev => prev.map((inst, i) => i === idx ? { ...inst, ...patch } : inst));
+  }
+
   async function onSubmit(values: Record<string, unknown>) {
     const typedValues = values as BusinessForm;
     try {
-      await createMutation.mutateAsync(typedValues);
+      const schedule = installments.length > 0
+        ? installments.map(i => ({ amount: parseFloat(i.amount) || 0, date: i.unknown ? null : (i.date || null), unknown: i.unknown }))
+        : null;
+      const createData = {
+        ...typedValues,
+        ...(isIncome && {
+          partner_split_pct: partnerSplit !== '' ? parseFloat(partnerSplit) : null,
+          project_total: projectTotal !== '' ? parseFloat(projectTotal) : null,
+          payment_schedule: schedule,
+          expected_payment_date: schedule ? (schedule.find(s => !s.unknown && s.date)?.date ?? null) : null,
+          expected_date_unknown: schedule ? schedule.every(s => s.unknown) : false,
+        }),
+      };
+      await createMutation.mutateAsync(createData);
       toast.success('העסקה נוספה בהצלחה!');
       onClose();
     } catch (e) {
@@ -230,6 +267,97 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
         <label className="text-sm font-medium">הערות (אופציונלי)</label>
         <Input className="mt-1" {...register('notes')} />
       </div>
+
+      {/* Partial payment section — income only */}
+      {isIncome && (
+        <div className="rounded-xl p-3 space-y-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
+          <p className="text-sm font-semibold" style={{ color: 'var(--t2)' }}>פרטי פרויקט (אופציונלי)</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium">% לשותף</label>
+              <Input
+                type="number" min="0" max="100" step="1"
+                className="mt-1"
+                placeholder="לדוגמה: 35"
+                value={partnerSplit}
+                onChange={e => setPartnerSplit(e.target.value)}
+              />
+              {partnerSplit !== '' && !isNaN(parseFloat(partnerSplit)) && (
+                <p className="text-xs text-white/50 mt-0.5">חלקך: {100 - parseFloat(partnerSplit)}%</p>
+              )}
+            </div>
+            <div>
+              <label className="text-sm font-medium">סה״כ פרויקט (₪)</label>
+              <Input
+                type="number" min="0" step="0.01"
+                className="mt-1"
+                placeholder="לדוגמה: 15000"
+                value={projectTotal}
+                onChange={e => setProjectTotal(e.target.value)}
+              />
+              {balance > 0 && (
+                <p className="text-xs text-yellow-400 mt-0.5 font-semibold">
+                  יתרה לגביה: ₪{balance.toLocaleString('he-IL')}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {balance > 0 && (
+            <div className="pt-1 space-y-2" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-yellow-400/80">תזמון תשלומים</p>
+                {scheduledTotal > 0 && (
+                  <p className={`text-xs font-semibold ${scheduledTotal >= balance ? 'text-green-400' : 'text-yellow-400'}`}>
+                    {scheduledTotal >= balance ? '✓' : ''} מתוזמן: ₪{scheduledTotal.toLocaleString('he-IL')} / ₪{balance.toLocaleString('he-IL')}
+                  </p>
+                )}
+              </div>
+              {installments.map((inst, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Input
+                    type="number" min="0" step="0.01"
+                    className="h-8 text-sm w-24 flex-shrink-0"
+                    placeholder="₪ סכום"
+                    value={inst.amount}
+                    onChange={e => updateInstallment(idx, { amount: e.target.value })}
+                  />
+                  {inst.unknown ? (
+                    <label className="flex items-center gap-1.5 flex-1 cursor-pointer min-w-0">
+                      <input type="checkbox" checked onChange={() => updateInstallment(idx, { unknown: false })} />
+                      <span className="text-xs text-white/50 truncate">תאריך לא ידוע</span>
+                    </label>
+                  ) : (
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                      <Input
+                        type="date"
+                        className="h-8 text-sm flex-1 min-w-0"
+                        value={inst.date}
+                        onChange={e => updateInstallment(idx, { date: e.target.value })}
+                      />
+                      <label className="flex items-center gap-1 cursor-pointer flex-shrink-0">
+                        <input type="checkbox" checked={false} onChange={() => updateInstallment(idx, { unknown: true, date: '' })} />
+                        <span className="text-xs text-white/40">לא ידוע</span>
+                      </label>
+                    </div>
+                  )}
+                  <button type="button" onClick={() => removeInstallment(idx)} className="text-white/30 hover:text-red-400 flex-shrink-0">
+                    <XIcon size={14} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addInstallment}
+                className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+              >
+                + הוסף תשלום
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <Button type="submit" className="w-full" disabled={createMutation.isPending}>
         {createMutation.isPending ? 'שומר...' : 'שמור עסקה'}
       </Button>
@@ -290,6 +418,205 @@ function PersonalExpenseForm({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ── Edit Transaction Dialog ───────────────────────────────────────────────────
+
+function EditTransactionDialog({ tx, onClose }: { tx: BusinessTransaction; onClose: () => void }) {
+  const updateMutation = useUpdateTransaction();
+  const isIncome = tx.type === 'income';
+  const [partnerSplit, setPartnerSplit] = useState(tx.partner_split_pct != null ? String(tx.partner_split_pct) : '');
+  const [projectTotal, setProjectTotal] = useState(tx.project_total != null ? String(tx.project_total) : '');
+
+  // Init installments from payment_schedule, or legacy single-date field
+  const [installments, setInstallments] = useState<Installment[]>(() => {
+    if (tx.payment_schedule && tx.payment_schedule.length > 0) {
+      return tx.payment_schedule.map(s => ({ amount: String(s.amount), date: s.date ?? '', unknown: s.unknown }));
+    }
+    if (tx.expected_payment_date || tx.expected_date_unknown) {
+      const bal = tx.project_total ? Math.max(0, Number(tx.project_total) - Number(tx.amount)) : Number(tx.amount);
+      return [{ amount: String(bal), date: tx.expected_payment_date ?? '', unknown: tx.expected_date_unknown ?? false }];
+    }
+    return [];
+  });
+
+  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
+    resolver: zodResolver(businessSchema),
+    defaultValues: {
+      type: tx.type,
+      amount: tx.amount,
+      description: tx.description,
+      category: tx.category,
+      date: tx.date,
+      notes: tx.notes ?? '',
+    },
+  });
+
+  const watchedAmount = watch('amount');
+  const balance = projectTotal !== '' && watchedAmount
+    ? Math.max(0, parseFloat(projectTotal) - Number(watchedAmount))
+    : 0;
+  const scheduledTotal = installments.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+
+  function addInstallment() {
+    const remaining = Math.max(0, balance - scheduledTotal);
+    setInstallments(prev => [...prev, { amount: remaining > 0 ? String(remaining) : '', date: '', unknown: false }]);
+  }
+  function removeInstallment(idx: number) { setInstallments(prev => prev.filter((_, i) => i !== idx)); }
+  function updateInstallment(idx: number, patch: Partial<Installment>) {
+    setInstallments(prev => prev.map((inst, i) => i === idx ? { ...inst, ...patch } : inst));
+  }
+
+  async function onSubmit(values: Record<string, unknown>) {
+    const typed = values as BusinessForm;
+    try {
+      const schedule = installments.length > 0
+        ? installments.map(i => ({ amount: parseFloat(i.amount) || 0, date: i.unknown ? null : (i.date || null), unknown: i.unknown }))
+        : null;
+      const updateData = {
+        ...typed,
+        ...(isIncome && {
+          partner_split_pct: partnerSplit !== '' ? parseFloat(partnerSplit) : null,
+          project_total: projectTotal !== '' ? parseFloat(projectTotal) : null,
+          payment_schedule: schedule,
+          expected_payment_date: schedule ? (schedule.find(s => !s.unknown && s.date)?.date ?? null) : null,
+          expected_date_unknown: schedule ? schedule.every(s => s.unknown) : false,
+        }),
+      };
+      await updateMutation.mutateAsync({ id: tx.id, data: updateData });
+      toast.success('העסקה עודכנה!');
+      onClose();
+    } catch (e) {
+      toast.error(String(e));
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium">סכום (₪)</label>
+          <Input type="number" step="0.01" className="mt-1" {...register('amount')} />
+          {errors.amount && <p className="text-xs text-red-500 mt-0.5">{errors.amount.message}</p>}
+        </div>
+        <div>
+          <label className="text-sm font-medium">תאריך</label>
+          <Input type="date" className="mt-1" {...register('date')} />
+        </div>
+      </div>
+      <div>
+        <label className="text-sm font-medium">תיאור</label>
+        <Input className="mt-1" {...register('description')} />
+        {errors.description && <p className="text-xs text-red-500 mt-0.5">{errors.description.message}</p>}
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium">קטגוריה</label>
+          <Select defaultValue={tx.category} onValueChange={(v) => setValue('category', v)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {BUSINESS_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-sm font-medium">הערות</label>
+          <Input className="mt-1" {...register('notes')} />
+        </div>
+      </div>
+      {isIncome && (
+        <div className="rounded-xl p-3 space-y-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
+          <p className="text-sm font-semibold" style={{ color: 'var(--t2)' }}>פרטי פרויקט (אופציונלי)</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium">% לשותף</label>
+              <Input
+                type="number" min="0" max="100" step="1"
+                className="mt-1"
+                placeholder="לדוגמה: 35"
+                value={partnerSplit}
+                onChange={e => setPartnerSplit(e.target.value)}
+              />
+              {partnerSplit !== '' && !isNaN(parseFloat(partnerSplit)) && (
+                <p className="text-xs text-white/50 mt-0.5">חלקך: {100 - parseFloat(partnerSplit)}%</p>
+              )}
+            </div>
+            <div>
+              <label className="text-sm font-medium">סה״כ פרויקט (₪)</label>
+              <Input
+                type="number" min="0" step="0.01"
+                className="mt-1"
+                placeholder="לדוגמה: 15000"
+                value={projectTotal}
+                onChange={e => setProjectTotal(e.target.value)}
+              />
+              {balance > 0 && (
+                <p className="text-xs text-yellow-400 mt-0.5 font-semibold">
+                  יתרה לגביה: ₪{balance.toLocaleString('he-IL')}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {balance > 0 && (
+            <div className="pt-1 space-y-2" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-yellow-400/80">תזמון תשלומים</p>
+                {scheduledTotal > 0 && (
+                  <p className={`text-xs font-semibold ${scheduledTotal >= balance ? 'text-green-400' : 'text-yellow-400'}`}>
+                    {scheduledTotal >= balance ? '✓' : ''} מתוזמן: ₪{scheduledTotal.toLocaleString('he-IL')} / ₪{balance.toLocaleString('he-IL')}
+                  </p>
+                )}
+              </div>
+              {installments.map((inst, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Input
+                    type="number" min="0" step="0.01"
+                    className="h-8 text-sm w-24 flex-shrink-0"
+                    placeholder="₪ סכום"
+                    value={inst.amount}
+                    onChange={e => updateInstallment(idx, { amount: e.target.value })}
+                  />
+                  {inst.unknown ? (
+                    <label className="flex items-center gap-1.5 flex-1 cursor-pointer min-w-0">
+                      <input type="checkbox" checked onChange={() => updateInstallment(idx, { unknown: false })} />
+                      <span className="text-xs text-white/50 truncate">תאריך לא ידוע</span>
+                    </label>
+                  ) : (
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                      <Input
+                        type="date"
+                        className="h-8 text-sm flex-1 min-w-0"
+                        value={inst.date}
+                        onChange={e => updateInstallment(idx, { date: e.target.value })}
+                      />
+                      <label className="flex items-center gap-1 cursor-pointer flex-shrink-0">
+                        <input type="checkbox" checked={false} onChange={() => updateInstallment(idx, { unknown: true, date: '' })} />
+                        <span className="text-xs text-white/40">לא ידוע</span>
+                      </label>
+                    </div>
+                  )}
+                  <button type="button" onClick={() => removeInstallment(idx)} className="text-white/30 hover:text-red-400 flex-shrink-0">
+                    <XIcon size={14} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addInstallment}
+                className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+              >
+                + הוסף תשלום
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
+        {updateMutation.isPending ? 'שומר...' : 'שמור שינויים'}
+      </Button>
+    </form>
+  );
+}
+
 // ── Personal Transaction Card (mobile + desktop for personal tab) ──────────────────────────────────────────────────
 
 function TransactionCard({ tx, tab, onDelete }: { tx: BusinessTransaction | PersonalExpense; tab: string; onDelete: (id: string) => void }) {
@@ -343,92 +670,174 @@ function ExpandableTransactionCard({
 }) {
   const updatePaymentStatus = useUpdatePaymentStatus();
   const isIncome = tx.type === 'income';
+  const [editOpen, setEditOpen] = useState(false);
 
   return (
-    <div
-      className="rounded-xl overflow-hidden mb-2 cursor-pointer"
-      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-      onClick={onToggle}
-    >
-      {/* Collapsed row — explicit RTL: text on RIGHT, controls on LEFT */}
-      <div className="flex items-center justify-between px-4 py-3" dir="rtl">
-        {/* RIGHT side (first in RTL flex): description + client + date */}
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="text-sm font-medium truncate">{tx.description}</span>
-          {tx.clients?.name && (
-            <span className="text-xs text-white/40 truncate hidden sm:block">— {tx.clients.name}</span>
-          )}
-          <span className="text-sm font-semibold text-white/50 flex-shrink-0">{formatDateShort(tx.date)}</span>
-        </div>
-        {/* LEFT side (second in RTL flex): chevron → type → status → amount (LTR order within group) */}
-        <div className="flex items-center gap-2 flex-shrink-0" dir="ltr">
-          <ChevronDown className={`h-4 w-4 text-white/30 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-            tx.type === 'income'
-              ? 'bg-green-500/15 text-green-400 border border-green-500/25'
-              : 'bg-red-500/15 text-red-400 border border-red-500/25'
-          }`}>
-            {tx.type === 'income' ? 'הכנסה' : 'הוצאה'}
-          </span>
-          <PaymentStatusBadge status={tx.payment_status} />
-          <span className={`text-base font-bold ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
-            {isIncome ? '+' : '-'}₪{Number(tx.amount).toLocaleString('he-IL')}
-          </span>
-        </div>
-      </div>
-
-      {/* Expanded panel */}
-      {expanded && (
-        <div
-          className="px-4 pb-4 pt-1"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex flex-wrap gap-2 items-center mb-3">
-            <span className="text-xs text-white/50">קטגוריה:</span>
-            <span className="text-sm">{tx.category}</span>
-            {tx.notes && (
-              <>
-                <span className="text-xs text-white/50 mr-2">הערות:</span>
-                <span className="text-sm">{tx.notes}</span>
-              </>
+    <>
+      <div
+        className="rounded-xl overflow-hidden mb-2 cursor-pointer"
+        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+        onClick={onToggle}
+      >
+        {/* Collapsed row — explicit RTL: text on RIGHT, controls on LEFT */}
+        <div className="flex items-center justify-between px-4 py-3" dir="rtl">
+          {/* RIGHT side (first in RTL flex): description + client + date */}
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-sm font-medium truncate">{tx.description}</span>
+            {tx.clients?.name && (
+              <span className="text-xs text-white/40 truncate hidden sm:block">— {tx.clients.name}</span>
+            )}
+            <span className="text-sm font-semibold text-white/50 flex-shrink-0">{formatDateShort(tx.date)}</span>
+          </div>
+          {/* LEFT side (second in RTL flex): chevron → type → status → amount (LTR order within group) */}
+          <div className="flex items-center gap-2 flex-shrink-0" dir="ltr">
+            <ChevronDown className={`h-4 w-4 text-white/30 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+              tx.type === 'income'
+                ? 'bg-green-500/15 text-green-400 border border-green-500/25'
+                : 'bg-red-500/15 text-red-400 border border-red-500/25'
+            }`}>
+              {tx.type === 'income' ? 'הכנסה' : 'הוצאה'}
+            </span>
+            <PaymentStatusBadge status={tx.payment_status} />
+            {/* Show green paid + yellow remaining when partial payment exists */}
+            {isIncome && tx.project_total != null && Number(tx.project_total) > Number(tx.amount) ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-base font-bold text-green-400">
+                  +₪{Number(tx.amount).toLocaleString('he-IL')}
+                </span>
+                <span className="text-xs font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/25 px-1.5 py-0.5 rounded-full">
+                  +₪{(Number(tx.project_total) - Number(tx.amount)).toLocaleString('he-IL')} יתרה
+                </span>
+              </div>
+            ) : (
+              <span className={`text-base font-bold ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
+                {isIncome ? '+' : '-'}₪{Number(tx.amount).toLocaleString('he-IL')}
+              </span>
             )}
           </div>
-          {/* Payment status toggle (only for income) */}
-          {isIncome && (
-            <div className="flex gap-2 flex-wrap">
+        </div>
+
+        {/* Expanded panel */}
+        {expanded && (
+          <div
+            className="px-4 pb-4 pt-1"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Category + notes */}
+            <div className="flex flex-wrap gap-2 items-center mb-3">
+              <span className="text-xs text-white/50">קטגוריה:</span>
+              <span className="text-sm">{tx.category}</span>
+              {tx.notes && (
+                <>
+                  <span className="text-xs text-white/50 mr-2">הערות:</span>
+                  <span className="text-sm">{tx.notes}</span>
+                </>
+              )}
+            </div>
+
+            {/* Partner split / project tracking info */}
+            {isIncome && (tx.partner_split_pct != null || tx.project_total != null) && (
+              <div className="mb-3 rounded-lg p-2.5 space-y-1.5" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                {tx.partner_split_pct != null && (
+                  <div className="flex items-center gap-3 text-sm flex-wrap">
+                    <span className="text-white/50">חלקי:</span>
+                    <span className="text-green-300 font-semibold">
+                      ₪{(Number(tx.amount) * (1 - tx.partner_split_pct / 100)).toLocaleString('he-IL')}
+                      <span className="text-white/40 font-normal"> ({100 - tx.partner_split_pct}%)</span>
+                    </span>
+                    <span className="text-white/20">|</span>
+                    <span className="text-white/50">שותף:</span>
+                    <span className="text-white/60">
+                      ₪{(Number(tx.amount) * tx.partner_split_pct / 100).toLocaleString('he-IL')}
+                      <span className="text-white/40"> ({tx.partner_split_pct}%)</span>
+                    </span>
+                  </div>
+                )}
+                {tx.project_total != null && (
+                  <div className="flex items-center gap-3 text-sm flex-wrap">
+                    <span className="text-white/50">פרויקט:</span>
+                    <span className="text-white/70">₪{Number(tx.project_total).toLocaleString('he-IL')} סה״כ</span>
+                    {Number(tx.project_total) > Number(tx.amount) && (
+                      <>
+                        <span className="text-white/20">|</span>
+                        <span className="text-yellow-400 font-semibold">
+                          יתרה לגביה: ₪{(Number(tx.project_total) - Number(tx.amount)).toLocaleString('he-IL')}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+                {/* Expected payment date */}
+                {tx.project_total != null && Number(tx.project_total) > Number(tx.amount) && (
+                  <div className="flex items-center gap-2 text-xs pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    <span className="text-white/40">תאריך צפוי:</span>
+                    {tx.expected_date_unknown ? (
+                      <span className="text-yellow-400/70 font-medium">תאריך לא ידוע</span>
+                    ) : tx.expected_payment_date ? (
+                      <span className="text-white/60 font-medium">{tx.expected_payment_date}</span>
+                    ) : (
+                      <span className="text-white/30 italic">לא הוגדר</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Payment status toggle (only for income) */}
+            {isIncome && (
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'paid' }); }}
+                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'paid' ? 'bg-green-500/30 text-green-300 border border-green-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
+                >
+                  שולם ✅
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'pending' }); }}
+                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'pending' ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
+                >
+                  ממתין 🟡
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'overdue' }); }}
+                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'overdue' ? 'bg-red-500/30 text-red-300 border border-red-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
+                >
+                  באיחור 🔴
+                </button>
+              </div>
+            )}
+            {/* Edit + Delete buttons */}
+            <div className="mt-3 flex justify-between items-center">
               <button
-                onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'paid' }); }}
-                className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'paid' ? 'bg-green-500/30 text-green-300 border border-green-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
+                onClick={(e) => { e.stopPropagation(); onDelete(tx.id); }}
+                className="text-xs text-red-400 hover:text-red-300 font-medium"
               >
-                שולם ✅
+                מחק
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'pending' }); }}
-                className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'pending' ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
+                onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}
+                className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-medium"
               >
-                ממתין 🟡
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'overdue' }); }}
-                className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'overdue' ? 'bg-red-500/30 text-red-300 border border-red-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
-              >
-                באיחור 🔴
+                <Pencil className="h-3 w-3" />
+                ערוך
               </button>
             </div>
-          )}
-          {/* Delete button */}
-          <div className="mt-3 flex justify-end">
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete(tx.id); }}
-              className="text-xs text-red-400 hover:text-red-300 font-medium"
-            >
-              מחק
-            </button>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>ערוך עסקה</DialogTitle>
+          </DialogHeader>
+          <EditTransactionDialog tx={tx} onClose={() => setEditOpen(false)} />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

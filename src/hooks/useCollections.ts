@@ -5,7 +5,7 @@ export function useCollections() {
   return useQuery({
     queryKey: ['collections'],
     queryFn: () => api.get('/collections'),
-    staleTime: 1000 * 60 * 2,
+    staleTime: 0,
   });
 }
 

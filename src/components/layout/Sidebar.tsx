@@ -18,21 +18,14 @@ const navItems = [
   { to: '/settings',     icon: Settings,         label: 'הגדרות' },
 ];
 
-export default function Sidebar() {
-  const sidebarOpen = useUIStore((s) => s.sidebarOpen);
-  const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
+const sidebarStyle = {
+  background: '#0D1117',
+  borderLeft: '1px solid rgba(255,255,255,0.12)',
+};
 
+function SidebarContent({ onClose, closeOnNav }: { onClose: () => void; closeOnNav: boolean }) {
   return (
-    <aside
-      className={cn(
-        'fixed right-0 top-0 h-full z-40 transition-transform duration-300 w-60 flex flex-col',
-        sidebarOpen ? 'translate-x-0' : 'translate-x-full'
-      )}
-      style={{
-        background: '#0D1117',
-        borderLeft: '1px solid rgba(255,255,255,0.07)',
-      }}
-    >
+    <>
       {/* Logo */}
       <div
         className="flex items-center gap-2.5 px-5 py-6 mb-3.5"
@@ -52,7 +45,7 @@ export default function Sidebar() {
           <div className="text-xs" style={{ color: 'var(--t2)' }}>ניהול פיננסי — נדב</div>
         </div>
         <button
-          onClick={() => setSidebarOpen(false)}
+          onClick={onClose}
           className="p-1.5 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0"
           style={{ color: 'var(--t2)' }}
           aria-label="סגור תפריט"
@@ -68,6 +61,7 @@ export default function Sidebar() {
             key={to}
             to={to}
             end={to === '/'}
+            onClick={closeOnNav ? onClose : undefined}
             className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
             style={({ isActive }) =>
               isActive
@@ -98,6 +92,39 @@ export default function Sidebar() {
       <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
         <p className="text-xs text-center" style={{ color: 'var(--t3)' }}>Junkie v1.0</p>
       </div>
-    </aside>
+    </>
+  );
+}
+
+export default function Sidebar() {
+  const sidebarOpen = useUIStore((s) => s.sidebarOpen);
+  const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
+
+  return (
+    <>
+      {/* ── Mobile: fixed overlay, slides in/out ── */}
+      <aside
+        className={cn(
+          'fixed right-0 top-0 h-full z-40 w-60 flex flex-col transition-transform duration-300 lg:hidden',
+          sidebarOpen ? 'translate-x-0' : 'translate-x-full'
+        )}
+        style={sidebarStyle}
+      >
+        <SidebarContent onClose={() => setSidebarOpen(false)} closeOnNav={true} />
+      </aside>
+
+      {/* ── Desktop: in-flow flex sibling — width animated here ── */}
+      <aside
+        className={cn(
+          'hidden lg:flex flex-col h-full flex-shrink-0 overflow-hidden transition-[width] duration-300',
+          sidebarOpen ? 'w-60' : 'w-0'
+        )}
+        style={{ ...sidebarStyle, position: 'relative', zIndex: 2 }}
+      >
+        <div className="w-60 h-full flex flex-col">
+          <SidebarContent onClose={() => setSidebarOpen(false)} closeOnNav={false} />
+        </div>
+      </aside>
+    </>
   );
 }

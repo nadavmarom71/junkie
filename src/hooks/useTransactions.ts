@@ -46,6 +46,7 @@ function invalidateDashboard(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['dashboard'] });
   qc.invalidateQueries({ queryKey: [TRANSACTIONS_KEY] });
   qc.invalidateQueries({ queryKey: ['categories'] });
+  qc.invalidateQueries({ queryKey: ['collections'] });
 }
 
 export function useCreateTransaction() {
@@ -113,6 +114,7 @@ export function useUpdatePaymentStatus() {
       qc.invalidateQueries({ queryKey: ['transactions'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
       qc.invalidateQueries({ queryKey: ['collections'] });
+      qc.invalidateQueries({ queryKey: ['categories'] });
     },
   });
 }

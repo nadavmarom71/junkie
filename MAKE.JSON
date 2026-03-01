@@ -1,0 +1,76 @@
+{
+    "name": "בדיקת טריגר Google Sheets",
+    "flow": [
+        {
+            "id": 1,
+            "module": "google-sheets:watchChanges",
+            "version": 4,
+            "parameters": {
+                "__IMTCONN__": 0
+            },
+            "mapper": {
+                "from": "drive",
+                "select": "map",
+                "sheetId": "Orders",
+                "spreadsheetId": "",
+                "tableFirstRow": "A1:J1",
+                "includesHeaders": true,
+                "valueRenderOption": "FORMATTED_VALUE",
+                "dateTimeRenderOption": "FORMATTED_STRING"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 0,
+                    "y": 0
+                }
+            }
+        },
+        {
+            "id": 2,
+            "module": "builtin:BasicFilter",
+            "version": 1,
+            "parameters": {},
+            "mapper": {
+                "condition": "{{if(1.`8` = \"TRUE\"; if(1.`9` = \"ממתין\"; true; false); false)}}"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 300,
+                    "y": 0
+                }
+            }
+        },
+        {
+            "id": 3,
+            "module": "util:SetVariable",
+            "version": 1,
+            "parameters": {},
+            "mapper": {
+                "name": "test_result",
+                "value": "✅ הטריגר עובד! הזמנה: {{1.`0`}} | לקוח: {{1.`2`}} | מוצר: {{1.`5`}} | כמות: {{1.`6`}}"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 600,
+                    "y": 0
+                }
+            }
+        }
+    ],
+    "metadata": {
+        "version": 1,
+        "scenario": {
+            "roundtrips": 1,
+            "maxErrors": 3,
+            "autoCommit": false,
+            "sequential": false,
+            "confidential": false,
+            "dataloss": false,
+            "dlq": false
+        },
+        "designer": {
+            "orphans": []
+        },
+        "zone": "eu1.make.com"
+    }
+}

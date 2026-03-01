@@ -1,6 +1,7 @@
-import { Menu, Plus, TrendingUp, TrendingDown, ShoppingCart, FileBarChart2 } from 'lucide-react';
+import { Menu, Plus, TrendingUp, TrendingDown, ShoppingCart, FileBarChart2, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '@/store/uiStore';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -9,6 +10,7 @@ import {
 export default function TopBar() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   return (
     <header
@@ -20,14 +22,25 @@ export default function TopBar() {
         WebkitBackdropFilter: 'blur(20px)',
       }}
     >
-      <button
-        onClick={toggleSidebar}
-        className="p-2 rounded-lg transition-colors hover:bg-white/5"
-        style={{ color: 'var(--t2)' }}
-        aria-label="Toggle sidebar"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={toggleSidebar}
+          className="p-2 rounded-lg transition-colors hover:bg-white/5"
+          style={{ color: 'var(--t2)' }}
+          aria-label="Toggle sidebar"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <button
+          onClick={logout}
+          className="p-2 rounded-lg transition-colors hover:bg-white/5"
+          style={{ color: 'var(--t2)' }}
+          aria-label="התנתק"
+          title="התנתק"
+        >
+          <LogOut className="h-5 w-5" />
+        </button>
+      </div>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
