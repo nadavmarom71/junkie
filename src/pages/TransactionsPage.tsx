@@ -657,6 +657,82 @@ function TransactionCard({ tx, tab, onDelete }: { tx: BusinessTransaction | Pers
 
 // ── Expandable Business Transaction Card ──────────────────────────────────────
 
+// ── Linked Expense Mini Form ───────────────────────────────────────────────────
+
+const linkedExpenseSchema = z.object({
+  amount: z.coerce.number().positive('הסכום חייב להיות חיובי'),
+  description: z.string().min(1, 'תיאור נדרש'),
+  category: z.string().min(1, 'קטגוריה נדרשת'),
+  date: z.string().min(1, 'תאריך נדרש'),
+  notes: z.string().optional(),
+});
+type LinkedExpenseForm = z.infer<typeof linkedExpenseSchema>;
+
+function AddLinkedExpenseDialog({ parentTx, onClose }: { parentTx: BusinessTransaction; onClose: () => void }) {
+  const today = new Date().toISOString().split('T')[0];
+  const createMutation = useCreateTransaction();
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm({
+    resolver: zodResolver(linkedExpenseSchema),
+    defaultValues: { date: today, category: BUSINESS_CATEGORIES[0] },
+  });
+
+  async function onSubmit(values: Record<string, unknown>) {
+    const typed = values as LinkedExpenseForm;
+    try {
+      await createMutation.mutateAsync({
+        ...typed,
+        type: 'expense',
+        payment_status: 'paid',
+        linked_transaction_id: parentTx.id,
+      });
+      toast.success('הוצאה מקושרת נוספה!');
+      onClose();
+    } catch (e) {
+      toast.error(String(e));
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+      <p className="text-sm text-white/50">מקושרת ל: <span className="text-white/80 font-semibold">{parentTx.description}</span></p>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium">סכום (₪)</label>
+          <Input type="number" step="0.01" className="mt-1" {...register('amount')} />
+          {errors.amount && <p className="text-xs text-red-500 mt-0.5">{errors.amount.message}</p>}
+        </div>
+        <div>
+          <label className="text-sm font-medium">תאריך</label>
+          <Input type="date" className="mt-1" {...register('date')} />
+        </div>
+      </div>
+      <div>
+        <label className="text-sm font-medium">תיאור</label>
+        <Input className="mt-1" {...register('description')} />
+        {errors.description && <p className="text-xs text-red-500 mt-0.5">{errors.description.message}</p>}
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium">קטגוריה</label>
+          <Select defaultValue={BUSINESS_CATEGORIES[0]} onValueChange={(v) => setValue('category', v)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {BUSINESS_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-sm font-medium">הערות</label>
+          <Input className="mt-1" {...register('notes')} />
+        </div>
+      </div>
+      <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+        {createMutation.isPending ? 'שומר...' : 'הוסף הוצאה'}
+      </Button>
+    </form>
+  );
+}
+
 function ExpandableTransactionCard({
   tx,
   expanded,
@@ -671,6 +747,8 @@ function ExpandableTransactionCard({
   const updatePaymentStatus = useUpdatePaymentStatus();
   const isIncome = tx.type === 'income';
   const [editOpen, setEditOpen] = useState(false);
+  const [addLinkedOpen, setAddLinkedOpen] = useState(false);
+  const deleteLinkedExpense = useDeleteTransaction();
 
   return (
     <>
@@ -808,6 +886,56 @@ function ExpandableTransactionCard({
                 </button>
               </div>
             )}
+            {/* Linked Expenses Section (income only) */}
+            {isIncome && (
+              <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-white/50">הוצאות מקושרות</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setAddLinkedOpen(true); }}
+                    className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" />
+                    הוסף הוצאה
+                  </button>
+                </div>
+                {tx.linked_expenses && tx.linked_expenses.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {tx.linked_expenses.map(exp => (
+                      <div
+                        key={exp.id}
+                        className="flex items-center justify-between rounded-lg px-2.5 py-1.5"
+                        style={{ background: 'rgba(244,63,94,0.07)', border: '1px solid rgba(244,63,94,0.15)' }}
+                      >
+                        <div className="min-w-0">
+                          <span className="text-xs font-medium text-white/80 truncate">{exp.description}</span>
+                          <span className="text-xs text-white/40 mr-2">{exp.category}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-xs font-bold text-red-400">-₪{Number(exp.amount).toLocaleString('he-IL')}</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteLinkedExpense.mutate(exp.id); }}
+                            className="text-white/20 hover:text-red-400 transition-colors"
+                          >
+                            <XIcon className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex justify-end pt-0.5">
+                      <span className="text-xs text-white/40">
+                        סה״כ הוצאות: <span className="text-red-400 font-semibold">
+                          ₪{tx.linked_expenses.reduce((s, e) => s + Number(e.amount), 0).toLocaleString('he-IL')}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-white/25 italic">אין הוצאות מקושרות</p>
+                )}
+              </div>
+            )}
+
             {/* Edit + Delete buttons */}
             <div className="mt-3 flex justify-between items-center">
               <button
@@ -835,6 +963,16 @@ function ExpandableTransactionCard({
             <DialogTitle>ערוך עסקה</DialogTitle>
           </DialogHeader>
           <EditTransactionDialog tx={tx} onClose={() => setEditOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Linked Expense Dialog */}
+      <Dialog open={addLinkedOpen} onOpenChange={setAddLinkedOpen}>
+        <DialogContent className="sm:max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>הוסף הוצאה מקושרת</DialogTitle>
+          </DialogHeader>
+          <AddLinkedExpenseDialog parentTx={tx} onClose={() => setAddLinkedOpen(false)} />
         </DialogContent>
       </Dialog>
     </>

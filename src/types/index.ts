@@ -102,6 +102,8 @@ export interface BusinessTransaction {
   expected_payment_date: string | null;
   expected_date_unknown: boolean;
   payment_schedule: Array<{ amount: number; date: string | null; unknown: boolean }> | null;
+  linked_transaction_id: string | null;
+  linked_expenses?: BusinessTransaction[];
   created_at: string;
   updated_at: string;
   // Joined
@@ -138,6 +140,7 @@ export interface CreateBusinessTransactionInput {
   expected_payment_date?: string | null;
   expected_date_unknown?: boolean;
   payment_schedule?: Array<{ amount: number; date: string | null; unknown: boolean }> | null;
+  linked_transaction_id?: string | null;
 }
 
 export interface CreatePersonalExpenseInput {

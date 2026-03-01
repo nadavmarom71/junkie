@@ -1,15 +1,29 @@
+import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import BottomNav from './BottomNav';
 import { useUIStore } from '@/store/uiStore';
+import SmartLoadingOverlay from '@/components/shared/SmartLoadingOverlay';
+import { useDashboardStats } from '@/hooks/useDashboard';
 
 export default function AppLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
 
+  // Show overlay only on first load per session (cold start scenario)
+  const [hasLoadedOnce] = useState(() => sessionStorage.getItem('app-loaded') === '1');
+  const { isLoading: dashLoading } = useDashboardStats();
+  if (!hasLoadedOnce && !dashLoading) {
+    sessionStorage.setItem('app-loaded', '1');
+  }
+  const showOverlay = !hasLoadedOnce && dashLoading;
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }} dir="rtl">
+      {/* Smart Loading Overlay — first load only */}
+      <SmartLoadingOverlay isLoading={showOverlay} />
+
       {/* Mobile: tap-to-close backdrop */}
       {sidebarOpen && (
         <div
