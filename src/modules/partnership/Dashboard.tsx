@@ -30,12 +30,12 @@ function StatCard({
         <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color}18` }}>
           {icon}
         </div>
-        <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">{label}</span>
+        <span className="text-sm font-semibold text-white/50 uppercase tracking-wide">{label}</span>
       </div>
-      <div className="text-2xl font-extrabold tracking-tight" style={{ color }}>
+      <div className="text-3xl font-extrabold tracking-tight" style={{ color }}>
         {display}
       </div>
-      {sub && <div className="text-xs text-white/35 mt-0.5">{sub}</div>}
+      {sub && <div className="text-sm text-white/35 mt-0.5">{sub}</div>}
     </div>
   );
 }
@@ -52,20 +52,20 @@ function PartnerCard({
       }}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-bold uppercase tracking-wider" style={{ color }}>
+        <span className="text-sm font-bold uppercase tracking-wider" style={{ color }}>
           {name}
         </span>
         <span
-          className="text-xs font-bold px-2 py-0.5 rounded-full"
+          className="text-sm font-bold px-2 py-0.5 rounded-full"
           style={{ background: `${color}20`, color }}
         >
           {split}%
         </span>
       </div>
-      <div className="text-2xl font-extrabold" style={{ color }}>
+      <div className="text-3xl font-extrabold" style={{ color }}>
         ₪{fmt(net)}
       </div>
-      <div className="text-xs mt-1" style={{ color: `${color}80` }}>
+      <div className="text-sm mt-1" style={{ color: `${color}80` }}>
         הכנסה נטו אחרי מס
       </div>
     </div>
@@ -131,7 +131,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className="px-4 py-1.5 rounded-full text-xs font-semibold transition-all"
+            className="px-4 py-1.5 rounded-full text-sm font-semibold transition-all"
             style={
               filter === f
                 ? { background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', color: '#fff', boxShadow: '0 4px 12px rgba(124,58,237,0.35)' }
@@ -142,7 +142,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
           </button>
         ))}
         {filter === 'month' && (
-          <span className="text-xs text-white/30 ms-1">
+          <span className="text-sm text-white/30 ms-1">
             {new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}
           </span>
         )}
@@ -182,15 +182,15 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
           </div>
           <div>
             <div className="text-sm font-bold text-white/80">רזרבת מס ({state.settings.taxRate}%)</div>
-            <div className="text-xs text-white/40">מתוך הרווח הגולמי</div>
+            <div className="text-sm text-white/40">מתוך הרווח הגולמי</div>
           </div>
         </div>
-        <div className="text-2xl font-extrabold text-yellow-400">₪{fmt(cv.taxReserve)}</div>
+        <div className="text-3xl font-extrabold text-yellow-400">₪{fmt(cv.taxReserve)}</div>
       </div>
 
       {/* Partner Net Earnings */}
       <div>
-        <p className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">הכנסה נטו לשותפים</p>
+        <p className="text-sm font-semibold text-white/40 uppercase tracking-widest mb-2">הכנסה נטו לשותפים</p>
         <div className="flex gap-2.5">
           <PartnerCard
             name="נדב"
@@ -209,7 +209,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
 
       {/* Balance / Debt Cards */}
       <div>
-        <p className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">יתרות שוטפות</p>
+        <p className="text-sm font-semibold text-white/40 uppercase tracking-widest mb-2">יתרות שוטפות</p>
         <div className="grid grid-cols-2 gap-2.5">
           {/* Nadav owes David */}
           <div
@@ -219,14 +219,14 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
               border: `1px solid ${cv.nadavOwesDavid > 0 ? 'rgba(249,115,22,0.25)' : 'rgba(0,196,140,0.15)'}`,
             }}
           >
-            <div className="text-xs font-semibold text-white/50 mb-1">נדב חייב לדוד</div>
+            <div className="text-sm font-semibold text-white/50 mb-1">נדב חייב לדוד</div>
             <div
-              className="text-xl font-extrabold"
+              className="text-2xl font-extrabold"
               style={{ color: cv.nadavOwesDavid > 0 ? '#f97316' : '#00C48C' }}
             >
               ₪{fmt(cv.nadavOwesDavid)}
             </div>
-            <div className="text-xs text-white/35 mt-0.5">
+            <div className="text-sm text-white/35 mt-0.5">
               {cv.nadavOwesDavid > 0 ? 'תשלומים עתידיים' : 'מאוזן ✓'}
             </div>
           </div>
@@ -239,14 +239,14 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
               border: `1px solid ${cv.davidOwesNadav > 0 ? 'rgba(124,58,237,0.25)' : 'rgba(0,196,140,0.15)'}`,
             }}
           >
-            <div className="text-xs font-semibold text-white/50 mb-1">דוד חייב לנדב</div>
+            <div className="text-sm font-semibold text-white/50 mb-1">דוד חייב לנדב</div>
             <div
-              className="text-xl font-extrabold"
+              className="text-2xl font-extrabold"
               style={{ color: cv.davidOwesNadav > 0 ? '#a78bfa' : '#00C48C' }}
             >
               ₪{fmt(cv.davidOwesNadav)}
             </div>
-            <div className="text-xs text-white/35 mt-0.5">
+            <div className="text-sm text-white/35 mt-0.5">
               {cv.davidOwesNadav > 0 ? 'החזר הוצאות' : 'מאוזן ✓'}
             </div>
           </div>
@@ -279,7 +279,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
             <Zap size={16} color="#a78bfa" />
             <span className="text-sm font-bold text-white">Smart Settle Up</span>
           </div>
-          <div className="text-xs text-white/60 space-y-1">
+          <div className="text-sm text-white/60 space-y-1">
             <div className="flex justify-between">
               <span>נדב חייב לדוד</span>
               <span className="text-orange-400 font-semibold">₪{fmt(cv.nadavOwesDavid)}</span>
@@ -296,10 +296,10 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
               style={{ background: 'rgba(255,255,255,0.04)' }}
             >
               <div className="flex items-center gap-1.5 mb-1.5">
-                <AlertCircle size={12} color="#EAB308" />
-                <span className="text-yellow-400 font-semibold">קיזוז חכם</span>
+                <AlertCircle size={13} color="#EAB308" />
+                <span className="text-sm text-yellow-400 font-semibold">קיזוז חכם</span>
               </div>
-              <p className="text-white/60">
+              <p className="text-sm text-white/60">
                 קזז ₪{fmt(netSettleAmount)} משני הצדדים.{' '}
                 {cv.nadavOwesDavid > cv.davidOwesNadav
                   ? `נדב ישלם לדוד ₪${fmt(cv.nadavOwesDavid - netSettleAmount)}`
@@ -314,24 +314,24 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
             {netSettleAmount > 0 && (
               <button
                 onClick={() => doSettle('net')}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5"
                 style={{ background: 'rgba(124,58,237,0.3)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.4)' }}
               >
-                <Zap size={12} />
+                <Zap size={13} />
                 קיזוז חכם
               </button>
             )}
             <button
               onClick={() => doSettle('full')}
-              className="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5"
               style={{ background: 'rgba(0,196,140,0.15)', color: '#00C48C', border: '1px solid rgba(0,196,140,0.3)' }}
             >
-              <CheckCircle size={12} />
+              <CheckCircle size={13} />
               סגור הכל
             </button>
             <button
               onClick={() => setSettleOpen(false)}
-              className="px-3 py-2.5 rounded-xl text-xs font-bold"
+              className="px-3 py-2.5 rounded-xl text-sm font-bold"
               style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}
             >
               ביטול

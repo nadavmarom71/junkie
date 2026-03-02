@@ -62,7 +62,7 @@ export default function Settings() {
           value={taxRate} onChange={e => setTaxRate(Number(e.target.value))}
           className="w-full accent-yellow-400"
         />
-        <div className="flex justify-between text-xs text-white/30">
+        <div className="flex justify-between text-sm text-white/30">
           <span>0%</span>
           <span className="text-white/50">ברירת מחדל: 12%</span>
           <span>40%</span>
@@ -77,7 +77,7 @@ export default function Settings() {
         <span className="text-sm font-bold text-white block">חלוקת הכנסות</span>
         <div className="flex items-center gap-3">
           <div className="flex-1 text-right">
-            <div className="text-xs text-blue-400 font-semibold mb-1">נדב</div>
+            <div className="text-sm text-blue-400 font-semibold mb-1">נדב</div>
             <div className="text-2xl font-extrabold text-blue-400">{nadavSplit}%</div>
           </div>
           <div className="flex-1">
@@ -88,11 +88,11 @@ export default function Settings() {
             />
           </div>
           <div className="flex-1 text-left">
-            <div className="text-xs text-purple-400 font-semibold mb-1">דוד</div>
+            <div className="text-sm text-purple-400 font-semibold mb-1">דוד</div>
             <div className="text-2xl font-extrabold text-purple-400">{davidSplit}%</div>
           </div>
         </div>
-        <p className="text-xs text-white/30 text-center">ברירת מחדל: נדב 65% / דוד 35%</p>
+        <p className="text-sm text-white/30 text-center">ברירת מחדל: נדב 65% / דוד 35%</p>
       </div>
 
       {/* Default Expense Split */}
@@ -105,13 +105,13 @@ export default function Settings() {
           <span className="text-sm font-bold text-white/60">נדב {expSplit}% / דוד {100 - expSplit}%</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-blue-400 font-bold">נדב</span>
+          <span className="text-sm text-blue-400 font-bold">נדב</span>
           <input
             type="range" min="0" max="100" step="5"
             value={expSplit} onChange={e => setExpSplit(Number(e.target.value))}
             className="flex-1 accent-purple-500"
           />
-          <span className="text-xs text-purple-400 font-bold">דוד</span>
+          <span className="text-sm text-purple-400 font-bold">דוד</span>
         </div>
       </div>
 
@@ -125,7 +125,7 @@ export default function Settings() {
           {categories.map(cat => (
             <div
               key={cat}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold"
               style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', color: '#a78bfa' }}
             >
               <span>{cat}</span>
@@ -180,7 +180,7 @@ export default function Settings() {
         className="rounded-2xl p-4"
         style={{ background: 'rgba(244,63,94,0.04)', border: '1px solid rgba(244,63,94,0.15)' }}
       >
-        <p className="text-xs font-bold text-red-400/80 mb-2">אזור מסוכן</p>
+        <p className="text-sm font-bold text-red-400/80 mb-2">אזור מסוכן</p>
         <button
           onClick={() => {
             if (confirm('האם לאפס את כל הנתונים של השותפות? פעולה זו בלתי הפיכה.')) {
@@ -188,7 +188,7 @@ export default function Settings() {
               window.location.reload();
             }
           }}
-          className="text-xs text-red-400/60 hover:text-red-400 font-semibold transition-colors underline"
+          className="text-sm text-red-400/60 hover:text-red-400 font-semibold transition-colors underline"
         >
           אפס את כל נתוני השותפות
         </button>

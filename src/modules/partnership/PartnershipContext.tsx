@@ -11,17 +11,27 @@ import type { ReactNode } from 'react';
 export type Payer = 'nadav' | 'david';
 
 export interface PartnershipSettings {
-  taxRate: number;          // 12% default
-  nadavSplit: number;       // 65% default
-  davidSplit: number;       // 35% default
-  defaultExpenseSplit: number; // 50% nadav default
+  taxRate: number;
+  nadavSplit: number;
+  davidSplit: number;
+  defaultExpenseSplit: number;
   expenseCategories: string[];
+}
+
+export interface LinkedExpense {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  date: string;
 }
 
 export interface IncomeBreakdown {
   kind: 'income';
-  taxAmount: number;
-  netIncome: number;
+  linkedExpenseTotal: number; // sum of transaction-level costs
+  effectiveGross: number;     // amount - linkedExpenseTotal
+  taxAmount: number;          // 12% of effectiveGross
+  netIncome: number;          // effectiveGross - taxAmount
   nadavShare: number;
   davidShare: number;
   nadavOwesDavidDelta: number;
@@ -32,7 +42,7 @@ export interface ExpenseBreakdown {
   kind: 'expense';
   category: string;
   paidBy: Payer;
-  splitRatio: number; // nadav's % of the expense
+  splitRatio: number;
   nadavShare: number;
   davidShare: number;
   offsetAgainstDebt: boolean;
@@ -45,9 +55,10 @@ export type TxBreakdown = IncomeBreakdown | ExpenseBreakdown;
 export interface PartnershipTx {
   id: string;
   type: 'income' | 'expense';
-  date: string; // YYYY-MM-DD
+  date: string;
   description: string;
   amount: number;
+  linkedExpenses?: LinkedExpense[]; // income only
   breakdown: TxBreakdown;
   createdAt: string;
 }
@@ -67,29 +78,49 @@ interface PartnershipState {
   settings: PartnershipSettings;
 }
 
+interface EditTxPayload {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  // expense only
+  category?: string;
+  paidBy?: Payer;
+  splitRatio?: number;
+  offsetAgainstDebt?: boolean;
+}
+
 type Action =
   | { type: 'ADD_TRANSACTION'; payload: PartnershipTx }
   | { type: 'DELETE_TRANSACTION'; payload: string }
   | { type: 'ADD_SETTLEMENT'; payload: Settlement }
-  | { type: 'UPDATE_SETTINGS'; payload: Partial<PartnershipSettings> };
+  | { type: 'UPDATE_SETTINGS'; payload: Partial<PartnershipSettings> }
+  | { type: 'EDIT_TRANSACTION'; payload: EditTxPayload }
+  | { type: 'ADD_LINKED_EXPENSE'; payload: { txId: string; expense: LinkedExpense } }
+  | { type: 'REMOVE_LINKED_EXPENSE'; payload: { txId: string; expenseId: string } };
 
 // ── Financial Logic Helpers ────────────────────────────────────────────────────
 
 export function calcIncomeBreakdown(
   amount: number,
-  settings: PartnershipSettings
+  settings: PartnershipSettings,
+  linkedExpenses: LinkedExpense[] = []
 ): IncomeBreakdown {
-  const taxAmount = amount * (settings.taxRate / 100);
-  const netIncome = amount - taxAmount;
+  const linkedExpenseTotal = linkedExpenses.reduce((s, e) => s + e.amount, 0);
+  const effectiveGross = Math.max(0, amount - linkedExpenseTotal);
+  const taxAmount = effectiveGross * (settings.taxRate / 100);
+  const netIncome = effectiveGross - taxAmount;
   const nadavShare = netIncome * (settings.nadavSplit / 100);
   const davidShare = netIncome * (settings.davidSplit / 100);
   return {
     kind: 'income',
+    linkedExpenseTotal,
+    effectiveGross,
     taxAmount,
     netIncome,
     nadavShare,
     davidShare,
-    nadavOwesDavidDelta: davidShare, // Nadav collects income → owes David his cut
+    nadavOwesDavidDelta: davidShare,
     davidOwesNadavDelta: 0,
   };
 }
@@ -108,18 +139,13 @@ export function calcExpenseBreakdown(
   let davidOwesNadavDelta = 0;
 
   if (paidBy === 'nadav') {
-    // Nadav paid → David owes Nadav his share
     if (offsetAgainstDebt) {
-      // Net it against Nadav's existing debt to David
       nadavOwesDavidDelta = -davidShare;
     } else {
-      // Track David's share separately
       davidOwesNadavDelta = davidShare;
     }
   } else {
-    // David paid → Nadav owes David his share
     if (offsetAgainstDebt) {
-      // Net it against David's existing debt to Nadav
       davidOwesNadavDelta = -nadavShare;
     } else {
       nadavOwesDavidDelta = nadavShare;
@@ -154,77 +180,55 @@ const DEFAULT_SETTINGS: PartnershipSettings = {
 
 function makeMockData(): { transactions: PartnershipTx[]; settlements: Settlement[] } {
   const s = DEFAULT_SETTINGS;
+  // Income tx m7 has a linked expense (freelancer ₪400 on a ₪4200 project)
+  const le1: LinkedExpense[] = [
+    { id: 'le_m7_1', description: 'פרילנסר — עריכה', amount: 400, category: 'פרילנסרים', date: '2026-03-06' },
+  ];
 
   const txs: PartnershipTx[] = [
     {
-      id: 'm1',
-      type: 'income',
-      date: '2025-12-20',
-      description: 'אתר לקוח — מרמלדה קפה',
-      amount: 8000,
-      breakdown: calcIncomeBreakdown(8000, s),
-      createdAt: '2025-12-20T10:00:00Z',
+      id: 'm1', type: 'income', date: '2025-12-20',
+      description: 'אתר לקוח — מרמלדה קפה', amount: 8000,
+      breakdown: calcIncomeBreakdown(8000, s), createdAt: '2025-12-20T10:00:00Z',
     },
     {
-      id: 'm2',
-      type: 'income',
-      date: '2026-01-15',
-      description: 'סרטון שיווקי — BizCo',
-      amount: 5000,
-      breakdown: calcIncomeBreakdown(5000, s),
-      createdAt: '2026-01-15T10:00:00Z',
+      id: 'm2', type: 'income', date: '2026-01-15',
+      description: 'סרטון שיווקי — BizCo', amount: 5000,
+      breakdown: calcIncomeBreakdown(5000, s), createdAt: '2026-01-15T10:00:00Z',
     },
     {
-      id: 'm3',
-      type: 'expense',
-      date: '2026-01-18',
-      description: 'Adobe Creative Cloud',
-      amount: 500,
+      id: 'm3', type: 'expense', date: '2026-01-18',
+      description: 'Adobe Creative Cloud', amount: 500,
       breakdown: calcExpenseBreakdown(500, 'תוכנות וכלים', 'nadav', 50, true),
       createdAt: '2026-01-18T12:00:00Z',
     },
     {
-      id: 'm4',
-      type: 'expense',
-      date: '2026-01-25',
-      description: 'פרסום Facebook — קמפיין ינואר',
-      amount: 800,
+      id: 'm4', type: 'expense', date: '2026-01-25',
+      description: 'פרסום Facebook — קמפיין ינואר', amount: 800,
       breakdown: calcExpenseBreakdown(800, 'שיווק ופרסום', 'nadav', 50, false),
       createdAt: '2026-01-25T14:00:00Z',
     },
     {
-      id: 'm5',
-      type: 'income',
-      date: '2026-02-10',
-      description: 'ייעוץ דיגיטל — StartupX',
-      amount: 3500,
-      breakdown: calcIncomeBreakdown(3500, s),
-      createdAt: '2026-02-10T09:00:00Z',
+      id: 'm5', type: 'income', date: '2026-02-10',
+      description: 'ייעוץ דיגיטל — StartupX', amount: 3500,
+      breakdown: calcIncomeBreakdown(3500, s), createdAt: '2026-02-10T09:00:00Z',
     },
     {
-      id: 'm6',
-      type: 'expense',
-      date: '2026-02-14',
-      description: 'כלים מקצועיים — Figma Pro',
-      amount: 350,
+      id: 'm6', type: 'expense', date: '2026-02-14',
+      description: 'כלים מקצועיים — Figma Pro', amount: 350,
       breakdown: calcExpenseBreakdown(350, 'תוכנות וכלים', 'david', 50, false),
       createdAt: '2026-02-14T11:00:00Z',
     },
     {
-      id: 'm7',
-      type: 'income',
-      date: '2026-03-05',
-      description: 'מיתוג מחדש — TechStart',
-      amount: 4200,
-      breakdown: calcIncomeBreakdown(4200, s),
+      id: 'm7', type: 'income', date: '2026-03-05',
+      description: 'מיתוג מחדש — TechStart', amount: 4200,
+      linkedExpenses: le1,
+      breakdown: calcIncomeBreakdown(4200, s, le1),
       createdAt: '2026-03-05T10:00:00Z',
     },
     {
-      id: 'm8',
-      type: 'expense',
-      date: '2026-03-08',
-      description: 'פרילנסר — צלם',
-      amount: 600,
+      id: 'm8', type: 'expense', date: '2026-03-08',
+      description: 'פרילנסר — צלם', amount: 600,
       breakdown: calcExpenseBreakdown(600, 'פרילנסרים', 'nadav', 50, true),
       createdAt: '2026-03-08T15:00:00Z',
     },
@@ -239,12 +243,83 @@ function reducer(state: PartnershipState, action: Action): PartnershipState {
   switch (action.type) {
     case 'ADD_TRANSACTION':
       return { ...state, transactions: [action.payload, ...state.transactions] };
+
     case 'DELETE_TRANSACTION':
       return { ...state, transactions: state.transactions.filter(t => t.id !== action.payload) };
+
     case 'ADD_SETTLEMENT':
       return { ...state, settlements: [action.payload, ...state.settlements] };
+
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } };
+
+    case 'EDIT_TRANSACTION': {
+      const p = action.payload;
+      return {
+        ...state,
+        transactions: state.transactions.map(tx => {
+          if (tx.id !== p.id) return tx;
+          if (tx.type === 'income') {
+            const linked = tx.linkedExpenses ?? [];
+            return {
+              ...tx,
+              description: p.description,
+              amount: p.amount,
+              date: p.date,
+              breakdown: calcIncomeBreakdown(p.amount, state.settings, linked),
+            };
+          } else {
+            const b = tx.breakdown as ExpenseBreakdown;
+            return {
+              ...tx,
+              description: p.description,
+              amount: p.amount,
+              date: p.date,
+              breakdown: calcExpenseBreakdown(
+                p.amount,
+                p.category ?? b.category,
+                p.paidBy ?? b.paidBy,
+                p.splitRatio ?? b.splitRatio,
+                p.offsetAgainstDebt ?? b.offsetAgainstDebt
+              ),
+            };
+          }
+        }),
+      };
+    }
+
+    case 'ADD_LINKED_EXPENSE': {
+      const { txId, expense } = action.payload;
+      return {
+        ...state,
+        transactions: state.transactions.map(tx => {
+          if (tx.id !== txId || tx.type !== 'income') return tx;
+          const linked = [...(tx.linkedExpenses ?? []), expense];
+          return {
+            ...tx,
+            linkedExpenses: linked,
+            breakdown: calcIncomeBreakdown(tx.amount, state.settings, linked),
+          };
+        }),
+      };
+    }
+
+    case 'REMOVE_LINKED_EXPENSE': {
+      const { txId, expenseId } = action.payload;
+      return {
+        ...state,
+        transactions: state.transactions.map(tx => {
+          if (tx.id !== txId || tx.type !== 'income') return tx;
+          const linked = (tx.linkedExpenses ?? []).filter(e => e.id !== expenseId);
+          return {
+            ...tx,
+            linkedExpenses: linked,
+            breakdown: calcIncomeBreakdown(tx.amount, state.settings, linked),
+          };
+        }),
+      };
+    }
+
     default:
       return state;
   }
@@ -302,13 +377,17 @@ export function PartnershipProvider({ children }: { children: ReactNode }) {
 
     const totalIncome = filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
     const totalExpenses = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-    const grossProfit = totalIncome - totalExpenses;
+    // Also count linked expenses as costs (deducted from gross)
+    const linkedTotal = filtered
+      .filter(t => t.type === 'income')
+      .reduce((s, t) => s + (t.linkedExpenses ?? []).reduce((ls, e) => ls + e.amount, 0), 0);
+    const grossProfit = totalIncome - totalExpenses - linkedTotal;
     const taxReserve = Math.max(0, grossProfit) * (state.settings.taxRate / 100);
     const afterTaxProfit = grossProfit - taxReserve;
-    const nadavNet = afterTaxProfit > 0 ? afterTaxProfit * (state.settings.nadavSplit / 100) : afterTaxProfit * (state.settings.nadavSplit / 100);
-    const davidNet = afterTaxProfit > 0 ? afterTaxProfit * (state.settings.davidSplit / 100) : afterTaxProfit * (state.settings.davidSplit / 100);
+    const nadavNet = afterTaxProfit * (state.settings.nadavSplit / 100);
+    const davidNet = afterTaxProfit * (state.settings.davidSplit / 100);
 
-    // Balances always use ALL transactions (running total), not filtered
+    // Balances always use ALL transactions (running total)
     const allTxs = state.transactions;
     const rawNadavOwesDavid = allTxs.reduce((s, t) => s + t.breakdown.nadavOwesDavidDelta, 0);
     const rawDavidOwesNadav = allTxs.reduce((s, t) => s + t.breakdown.davidOwesNadavDelta, 0);

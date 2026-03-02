@@ -48,7 +48,7 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-semibold text-white/60 block mb-1.5">סכום (₪)</label>
+          <label className="text-sm font-semibold text-white/60 block mb-1.5">סכום (₪)</label>
           <input
             type="number" min="0" step="0.01"
             value={amount} onChange={e => setAmount(e.target.value)}
@@ -58,7 +58,7 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-white/60 block mb-1.5">תאריך</label>
+          <label className="text-sm font-semibold text-white/60 block mb-1.5">תאריך</label>
           <input
             type="date" value={date} onChange={e => setDate(e.target.value)}
             className="w-full rounded-xl px-3 py-2.5 text-sm bg-white/5 border border-white/10 text-white focus:outline-none focus:border-green-500/50 transition-colors"
@@ -67,7 +67,7 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
         </div>
       </div>
       <div>
-        <label className="text-xs font-semibold text-white/60 block mb-1.5">תיאור / לקוח</label>
+        <label className="text-sm font-semibold text-white/60 block mb-1.5">תיאור / לקוח</label>
         <input
           type="text" value={desc} onChange={e => setDesc(e.target.value)}
           placeholder="לדוגמה: אתר לקוח — חברה בע״מ"
@@ -83,10 +83,10 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
           style={{ background: 'rgba(0,196,140,0.06)', border: '1px solid rgba(0,196,140,0.2)' }}
         >
           <div className="flex items-center gap-1.5 mb-2">
-            <Eye size={12} color="#00C48C" />
-            <span className="text-xs font-bold text-green-400">תצוגה מקדימה</span>
+            <Eye size={13} color="#00C48C" />
+            <span className="text-sm font-bold text-green-400">תצוגה מקדימה</span>
           </div>
-          <div className="space-y-1.5 text-xs">
+          <div className="space-y-1.5 text-sm">
             <div className="flex justify-between">
               <span className="text-white/50">ברוטו</span>
               <span className="text-white font-semibold">₪{fmt(parseFloat(amount))}</span>
@@ -108,8 +108,8 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
               <span className="text-purple-400 font-bold">+₪{fmt(preview.davidShare)}</span>
             </div>
             <div className="flex justify-between pt-1.5 border-t border-white/10">
-              <span className="text-orange-400 text-[11px]">אפקט על יתרה</span>
-              <span className="text-orange-400 font-semibold text-[11px]">
+              <span className="text-orange-400 text-xs">אפקט על יתרה</span>
+              <span className="text-orange-400 font-semibold text-xs">
                 נדב חייב לדוד +₪{fmt(preview.davidShare)}
               </span>
             </div>
@@ -179,7 +179,7 @@ function ExpenseForm({ onSaved }: { onSaved: () => void }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-semibold text-white/60 block mb-1.5">סכום (₪)</label>
+          <label className="text-sm font-semibold text-white/60 block mb-1.5">סכום (₪)</label>
           <input
             type="number" min="0" step="0.01"
             value={amount} onChange={e => setAmount(e.target.value)}
@@ -189,7 +189,7 @@ function ExpenseForm({ onSaved }: { onSaved: () => void }) {
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-white/60 block mb-1.5">תאריך</label>
+          <label className="text-sm font-semibold text-white/60 block mb-1.5">תאריך</label>
           <input
             type="date" value={date} onChange={e => setDate(e.target.value)}
             className="w-full rounded-xl px-3 py-2.5 text-sm bg-white/5 border border-white/10 text-white focus:outline-none focus:border-red-500/50 transition-colors"
@@ -198,7 +198,7 @@ function ExpenseForm({ onSaved }: { onSaved: () => void }) {
         </div>
       </div>
       <div>
-        <label className="text-xs font-semibold text-white/60 block mb-1.5">תיאור</label>
+        <label className="text-sm font-semibold text-white/60 block mb-1.5">תיאור</label>
         <input
           type="text" value={desc} onChange={e => setDesc(e.target.value)}
           placeholder="לדוגמה: Adobe Creative Cloud"
@@ -208,7 +208,7 @@ function ExpenseForm({ onSaved }: { onSaved: () => void }) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-semibold text-white/60 block mb-1.5">קטגוריה</label>
+          <label className="text-sm font-semibold text-white/60 block mb-1.5">קטגוריה</label>
           <select
             value={category} onChange={e => setCategory(e.target.value)}
             className="w-full rounded-xl px-3 py-2.5 text-sm bg-white/5 border border-white/10 text-white focus:outline-none transition-colors"
@@ -220,13 +220,13 @@ function ExpenseForm({ onSaved }: { onSaved: () => void }) {
           </select>
         </div>
         <div>
-          <label className="text-xs font-semibold text-white/60 block mb-1.5">שילם</label>
+          <label className="text-sm font-semibold text-white/60 block mb-1.5">שילם</label>
           <div className="flex gap-1.5 mt-0.5">
             {(['nadav', 'david'] as const).map(p => (
               <button
                 key={p} type="button"
                 onClick={() => setPaidBy(p)}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all"
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
                 style={
                   paidBy === p
                     ? { background: p === 'nadav' ? '#2563EB' : '#7c3aed', color: '#fff' }
@@ -242,17 +242,17 @@ function ExpenseForm({ onSaved }: { onSaved: () => void }) {
 
       {/* Split Ratio */}
       <div>
-        <label className="text-xs font-semibold text-white/60 block mb-2">
+        <label className="text-sm font-semibold text-white/60 block mb-2">
           חלוקת הוצאה — נדב {splitRatio}% / דוד {100 - splitRatio}%
         </label>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-blue-400 font-bold w-8">0%</span>
+          <span className="text-sm text-blue-400 font-bold w-8">0%</span>
           <input
             type="range" min="0" max="100" step="5"
             value={splitRatio} onChange={e => setSplitRatio(Number(e.target.value))}
             className="flex-1 accent-purple-500"
           />
-          <span className="text-xs text-purple-400 font-bold w-9 text-right">100%</span>
+          <span className="text-sm text-purple-400 font-bold w-9 text-right">100%</span>
         </div>
       </div>
 
@@ -290,10 +290,10 @@ function ExpenseForm({ onSaved }: { onSaved: () => void }) {
           style={{ background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.2)' }}
         >
           <div className="flex items-center gap-1.5 mb-2">
-            <Eye size={12} color="#F43F5E" />
-            <span className="text-xs font-bold text-red-400">תצוגה מקדימה</span>
+            <Eye size={13} color="#F43F5E" />
+            <span className="text-sm font-bold text-red-400">תצוגה מקדימה</span>
           </div>
-          <div className="space-y-1.5 text-xs">
+          <div className="space-y-1.5 text-sm">
             <div className="flex justify-between">
               <span className="text-white/50">סה״כ הוצאה</span>
               <span className="text-red-400 font-semibold">₪{fmt(parseFloat(amount))}</span>
@@ -309,16 +309,16 @@ function ExpenseForm({ onSaved }: { onSaved: () => void }) {
             <div className="border-t border-white/10 pt-1.5 space-y-1">
               {preview.nadavOwesDavidDelta !== 0 && (
                 <div className="flex justify-between">
-                  <span className="text-orange-400 text-[11px]">נדב חייב לדוד</span>
-                  <span className={`font-semibold text-[11px] ${preview.nadavOwesDavidDelta > 0 ? 'text-orange-400' : 'text-green-400'}`}>
+                  <span className="text-orange-400 text-xs">נדב חייב לדוד</span>
+                  <span className={`font-semibold text-xs ${preview.nadavOwesDavidDelta > 0 ? 'text-orange-400' : 'text-green-400'}`}>
                     {preview.nadavOwesDavidDelta > 0 ? '+' : ''}₪{fmt(preview.nadavOwesDavidDelta)}
                   </span>
                 </div>
               )}
               {preview.davidOwesNadavDelta !== 0 && (
                 <div className="flex justify-between">
-                  <span className="text-purple-400 text-[11px]">דוד חייב לנדב</span>
-                  <span className={`font-semibold text-[11px] ${preview.davidOwesNadavDelta > 0 ? 'text-purple-400' : 'text-green-400'}`}>
+                  <span className="text-purple-400 text-xs">דוד חייב לנדב</span>
+                  <span className={`font-semibold text-xs ${preview.davidOwesNadavDelta > 0 ? 'text-purple-400' : 'text-green-400'}`}>
                     {preview.davidOwesNadavDelta > 0 ? '+' : ''}₪{fmt(preview.davidOwesNadavDelta)}
                   </span>
                 </div>

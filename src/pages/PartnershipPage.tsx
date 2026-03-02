@@ -37,7 +37,7 @@ function TabBar({
           <button
             key={id}
             onClick={() => onChange(id)}
-            className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl text-[11px] font-semibold transition-all"
+            className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-semibold transition-all"
             style={
               isActive
                 ? {
@@ -52,7 +52,7 @@ function TabBar({
                   }
             }
           >
-            <Icon size={15} />
+            <Icon size={17} />
             {label}
           </button>
         );
@@ -88,13 +88,13 @@ function Header() {
         </div>
       </div>
       <div>
-        <div className="text-base font-extrabold text-white leading-tight">השותפות שלך</div>
-        <div className="text-xs text-white/40 mt-0.5">נדב 65% · דוד 35%</div>
+        <div className="text-lg font-extrabold text-white leading-tight">השותפות שלך</div>
+        <div className="text-sm text-white/40 mt-0.5">נדב 65% · דוד 35%</div>
       </div>
       {/* Live indicator */}
       <div className="ms-auto flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-        <span className="text-xs text-green-400/70 font-semibold">פעיל</span>
+        <span className="text-sm text-green-400/70 font-semibold">פעיל</span>
       </div>
     </div>
   );

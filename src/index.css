@@ -83,6 +83,10 @@
     color: var(--text);
   }
 
+  html {
+    font-size: 17px; /* Base scale-up: 1rem = 17px instead of 16px */
+  }
+
   body {
     font-synthesis: none;
     text-rendering: optimizeLegibility;
