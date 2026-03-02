@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ArrowLeftRight, Banknote, Users, Plus, TrendingUp, TrendingDown, ShoppingCart } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Banknote, Users, Plus, TrendingUp, TrendingDown, ShoppingCart, Users2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_LEFT = [
@@ -10,6 +10,7 @@ const NAV_LEFT = [
 const NAV_RIGHT = [
   { to: '/collections',  icon: Banknote, label: 'גבייה' },
   { to: '/clients',      icon: Users,    label: 'לקוחות' },
+  { to: '/partnership',  icon: Users2,   label: 'שותפות', accent: true },
 ];
 
 const QUICK_ACTIONS = [
@@ -22,7 +23,7 @@ export default function BottomNav() {
   const [fabOpen, setFabOpen] = useState(false);
   const navigate = useNavigate();
 
-  const navLinkClass = 'flex flex-col items-center gap-0.5 px-3 py-1.5 min-w-[52px]';
+  const navLinkClass = 'flex flex-col items-center gap-0.5 px-2 py-1.5 min-w-[44px]';
 
   return (
     <>
@@ -97,16 +98,33 @@ export default function BottomNav() {
           </button>
 
           {/* Right items */}
-          {NAV_RIGHT.map(({ to, icon: Icon, label }) => (
+          {NAV_RIGHT.map(({ to, icon: Icon, label, accent }) => (
             <NavLink key={to} to={to} className={navLinkClass}>
               {({ isActive }) => (
                 <>
-                  <Icon className="h-5 w-5" style={{ color: isActive ? '#2563EB' : 'rgba(255,255,255,0.35)' }} />
-                  <span className="text-[10px] font-medium" style={{ color: isActive ? '#2563EB' : 'rgba(255,255,255,0.35)' }}>
+                  <Icon
+                    className="h-5 w-5"
+                    style={{
+                      color: isActive
+                        ? (accent ? '#a78bfa' : '#2563EB')
+                        : 'rgba(255,255,255,0.35)',
+                    }}
+                  />
+                  <span
+                    className="text-[10px] font-medium"
+                    style={{
+                      color: isActive
+                        ? (accent ? '#a78bfa' : '#2563EB')
+                        : 'rgba(255,255,255,0.35)',
+                    }}
+                  >
                     {label}
                   </span>
                   {isActive && (
-                    <span className="absolute bottom-1 w-1 h-1 rounded-full bg-blue-500" />
+                    <span
+                      className="absolute bottom-1 w-1 h-1 rounded-full"
+                      style={{ background: accent ? '#7c3aed' : '#2563EB' }}
+                    />
                   )}
                 </>
               )}

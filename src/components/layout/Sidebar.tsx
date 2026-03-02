@@ -1,21 +1,22 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, Lightbulb, Users,
-  TrendingUp, FileText, Repeat, Settings, X, Banknote,
+  TrendingUp, FileText, Repeat, Settings, X, Banknote, Users2,
 } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { to: '/',             icon: LayoutDashboard, label: 'לוח מחוונים' },
-  { to: '/transactions', icon: ArrowLeftRight,   label: 'עסקאות' },
-  { to: '/collections',  icon: Banknote,         label: 'גבייה' },
-  { to: '/insights',     icon: Lightbulb,        label: 'תובנות AI' },
-  { to: '/clients',      icon: Users,            label: 'לקוחות' },
-  { to: '/retainers',    icon: Repeat,           label: 'ריטיינרים' },
-  { to: '/forecast',     icon: TrendingUp,       label: 'תחזית' },
-  { to: '/reports',      icon: FileText,         label: 'דוחות' },
-  { to: '/settings',     icon: Settings,         label: 'הגדרות' },
+  { to: '/',             icon: LayoutDashboard, label: 'לוח מחוונים',    accent: undefined },
+  { to: '/transactions', icon: ArrowLeftRight,   label: 'עסקאות',        accent: undefined },
+  { to: '/collections',  icon: Banknote,         label: 'גבייה',         accent: undefined },
+  { to: '/insights',     icon: Lightbulb,        label: 'תובנות AI',     accent: undefined },
+  { to: '/clients',      icon: Users,            label: 'לקוחות',        accent: undefined },
+  { to: '/retainers',    icon: Repeat,           label: 'ריטיינרים',     accent: undefined },
+  { to: '/forecast',     icon: TrendingUp,       label: 'תחזית',         accent: undefined },
+  { to: '/reports',      icon: FileText,         label: 'דוחות',         accent: undefined },
+  { to: '/settings',     icon: Settings,         label: 'הגדרות',        accent: undefined },
+  { to: '/partnership',  icon: Users2,           label: 'השותפות שלך',   accent: '#7c3aed' },
 ];
 
 const sidebarStyle = {
@@ -56,7 +57,7 @@ function SidebarContent({ onClose, closeOnNav }: { onClose: () => void; closeOnN
 
       {/* Nav */}
       <nav className="flex-1 px-3 space-y-px overflow-y-auto">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {navItems.map(({ to, icon: Icon, label, accent }) => (
           <NavLink
             key={to}
             to={to}
@@ -65,7 +66,11 @@ function SidebarContent({ onClose, closeOnNav }: { onClose: () => void; closeOnN
             className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
             style={({ isActive }) =>
               isActive
-                ? { background: 'rgba(37,99,235,0.15)', color: '#fff', fontWeight: 600 }
+                ? {
+                    background: accent ? `${accent}20` : 'rgba(37,99,235,0.15)',
+                    color: '#fff',
+                    fontWeight: 600,
+                  }
                 : { color: 'var(--t2)' }
             }
           >
@@ -73,13 +78,16 @@ function SidebarContent({ onClose, closeOnNav }: { onClose: () => void; closeOnN
               <>
                 <Icon
                   className="h-4 w-4 flex-shrink-0"
-                  style={{ color: isActive ? '#2563EB' : 'var(--t3)' }}
+                  style={{ color: isActive ? (accent ?? '#2563EB') : 'var(--t3)' }}
                 />
                 <span className="flex-1">{label}</span>
                 {isActive && (
                   <span
                     className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: '#2563EB', boxShadow: '0 0 8px rgba(37,99,235,0.6)' }}
+                    style={{
+                      background: accent ?? '#2563EB',
+                      boxShadow: `0 0 8px ${accent ?? 'rgba(37,99,235,0.6)'}`,
+                    }}
                   />
                 )}
               </>

@@ -14,6 +14,7 @@ import RetainersPage from '@/pages/RetainersPage';
 import RetainerDetailPage from '@/pages/RetainerDetailPage';
 import SettingsPage from '@/pages/SettingsPage';
 import CollectionsPage from '@/pages/CollectionsPage';
+import PartnershipPage from '@/pages/PartnershipPage';
 
 const router = createBrowserRouter([
   {
@@ -31,6 +32,7 @@ const router = createBrowserRouter([
       { path: 'retainers/:id', element: <RetainerDetailPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'collections', element: <CollectionsPage /> },
+      { path: 'partnership', element: <PartnershipPage /> },
     ],
   },
 ]);
