@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Eye } from 'lucide-react';
+import { TrendingUp, TrendingDown, Eye, Plus, X } from 'lucide-react';
 import { usePartnership, calcIncomeBreakdown, calcExpenseBreakdown } from './PartnershipContext';
-import type { Payer } from './PartnershipContext';
+import type { Payer, LinkedExpense } from './PartnershipContext';
 
 function fmt(n: number) {
   return Math.abs(n).toLocaleString('he-IL', { maximumFractionDigits: 0 });
@@ -17,11 +17,33 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
   const [date, setDate] = useState(today);
   const [saved, setSaved] = useState(false);
 
+  // Linked expenses state
+  const [linkedExpenses, setLinkedExpenses] = useState<LinkedExpense[]>([]);
+  const [showAddExpense, setShowAddExpense] = useState(false);
+  const [expDesc, setExpDesc] = useState('');
+  const [expAmount, setExpAmount] = useState('');
+  const [expCategory, setExpCategory] = useState(state.settings.expenseCategories[0]);
+
   const preview = useMemo(() => {
     const n = parseFloat(amount);
     if (!n || n <= 0) return null;
-    return calcIncomeBreakdown(n, state.settings);
-  }, [amount, state.settings]);
+    return calcIncomeBreakdown(n, state.settings, linkedExpenses);
+  }, [amount, state.settings, linkedExpenses]);
+
+  function addLinkedExpense() {
+    const n = parseFloat(expAmount);
+    if (!n || !expDesc) return;
+    setLinkedExpenses(prev => [
+      ...prev,
+      { id: `le_${Date.now()}`, description: expDesc, amount: n, category: expCategory, date: today },
+    ]);
+    setExpDesc(''); setExpAmount('');
+    setShowAddExpense(false);
+  }
+
+  function removeLinkedExpense(id: string) {
+    setLinkedExpenses(prev => prev.filter(e => e.id !== id));
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,14 +57,17 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
         date,
         description: desc,
         amount: n,
-        breakdown: calcIncomeBreakdown(n, state.settings),
+        linkedExpenses: linkedExpenses.length > 0 ? linkedExpenses : undefined,
+        breakdown: calcIncomeBreakdown(n, state.settings, linkedExpenses),
         createdAt: new Date().toISOString(),
       },
     });
-    setDesc(''); setAmount(''); setDate(today);
+    setDesc(''); setAmount(''); setDate(today); setLinkedExpenses([]);
     setSaved(true);
     setTimeout(() => { setSaved(false); onSaved(); }, 900);
   }
+
+  const linkedTotal = linkedExpenses.reduce((s, e) => s + e.amount, 0);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -76,6 +101,89 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
         />
       </div>
 
+      {/* ── Linked Expenses Section ── */}
+      <div
+        className="rounded-2xl p-4 space-y-3"
+        style={{ background: 'rgba(244,63,94,0.05)', border: '1px solid rgba(244,63,94,0.2)' }}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-sm font-bold text-red-400">הוצאות על ההכנסה</span>
+            <p className="text-xs text-white/35 mt-0.5">פרילנסרים, כלים, קבלנים — מקוזזות לפני מס</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAddExpense(v => !v)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm font-bold transition-colors"
+            style={showAddExpense
+              ? { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }
+              : { background: 'rgba(244,63,94,0.15)', color: '#f87171', border: '1px solid rgba(244,63,94,0.3)' }
+            }
+          >
+            {showAddExpense ? <><X size={13} /> ביטול</> : <><Plus size={13} /> הוסף</>}
+          </button>
+        </div>
+
+        {/* Add expense mini-form */}
+        {showAddExpense && (
+          <div className="space-y-2 pt-2" style={{ borderTop: '1px solid rgba(244,63,94,0.15)' }}>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="number" min="0" step="0.01" placeholder="סכום" value={expAmount}
+                onChange={e => setExpAmount(e.target.value)}
+                className="rounded-lg px-2.5 py-2 text-sm bg-white/6 border border-white/12 text-white placeholder:text-white/25 focus:outline-none"
+              />
+              <select value={expCategory} onChange={e => setExpCategory(e.target.value)}
+                className="rounded-lg px-2.5 py-2 text-sm border border-white/12 text-white focus:outline-none"
+                style={{ background: '#1a1f2e' }}
+              >
+                {state.settings.expenseCategories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <input
+              type="text" placeholder="תיאור — לדוגמה: פרילנסר עיצוב" value={expDesc}
+              onChange={e => setExpDesc(e.target.value)}
+              className="w-full rounded-lg px-2.5 py-2 text-sm bg-white/6 border border-white/12 text-white placeholder:text-white/25 focus:outline-none"
+            />
+            <button type="button" onClick={addLinkedExpense}
+              className="w-full py-2 rounded-lg text-sm font-bold transition-colors"
+              style={{ background: 'rgba(244,63,94,0.2)', color: '#f87171', border: '1px solid rgba(244,63,94,0.35)' }}
+            >
+              הוסף הוצאה
+            </button>
+          </div>
+        )}
+
+        {/* Linked expense list */}
+        {linkedExpenses.map(exp => (
+          <div key={exp.id} className="flex items-center justify-between py-1.5">
+            <div className="min-w-0">
+              <span className="text-sm font-medium text-white/80">{exp.description}</span>
+              <span className="text-xs text-white/35 me-1.5"> · {exp.category}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-sm font-bold text-red-400">−₪{fmt(exp.amount)}</span>
+              <button type="button" onClick={() => removeLinkedExpense(exp.id)}
+                className="text-white/25 hover:text-red-400 transition-colors"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {linkedTotal > 0 && (
+          <div className="flex justify-between pt-2" style={{ borderTop: '1px solid rgba(244,63,94,0.15)' }}>
+            <span className="text-sm text-white/50">סה״כ הוצאות ישירות</span>
+            <span className="text-sm font-bold text-red-400">−₪{fmt(linkedTotal)}</span>
+          </div>
+        )}
+
+        {linkedExpenses.length === 0 && !showAddExpense && (
+          <p className="text-xs text-white/25 italic">אין הוצאות — לחץ "הוסף" לצרף עלויות ישירות</p>
+        )}
+      </div>
+
       {/* Live Preview */}
       {preview && (
         <div
@@ -91,6 +199,18 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
               <span className="text-white/50">ברוטו</span>
               <span className="text-white font-semibold">₪{fmt(parseFloat(amount))}</span>
             </div>
+            {linkedTotal > 0 && (
+              <div className="flex justify-between">
+                <span className="text-red-400/70">הוצאות ישירות</span>
+                <span className="text-red-400 font-semibold">−₪{fmt(linkedTotal)}</span>
+              </div>
+            )}
+            {linkedTotal > 0 && (
+              <div className="flex justify-between">
+                <span className="text-white/50">ברוטו מותאם</span>
+                <span className="text-white/80 font-semibold">₪{fmt(preview.effectiveGross)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-white/50">מס ({state.settings.taxRate}%)</span>
               <span className="text-yellow-400 font-semibold">−₪{fmt(preview.taxAmount)}</span>
