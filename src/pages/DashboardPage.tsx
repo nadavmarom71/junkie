@@ -270,7 +270,7 @@ export default function DashboardPage() {
                 )}
                 {(data.taxEstimate.socialSecurity ?? 0) > 0 && (
                   <div className="text-center">
-                    <div className="text-xs" style={{ color: 'var(--t2)' }}>ביטוח לאומי</div>
+                    <div className="text-xs" style={{ color: 'var(--t2)' }}>ביטוח לאומי + בריאות</div>
                     <div className="text-lg font-bold text-amber-400">₪{(data.taxEstimate.socialSecurity ?? 0).toLocaleString('he-IL')}</div>
                   </div>
                 )}

@@ -179,38 +179,76 @@ export default function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>מס הכנסה (%)</Label>
-              <Input
-                type="number"
-                value={(currentSettings?.income_tax_rate as number) || ''}
-                onChange={(e) => set('income_tax_rate', Number(e.target.value))}
-                placeholder="31"
+          {/* Row 1: Dealer type + Credit points */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-sm">עוסק פטור</p>
+                <p className="text-xs text-white/50">פטור ממע&quot;מ (מע&quot;מ = 0%)</p>
+              </div>
+              <Switch
+                checked={(currentSettings?.is_exempt_dealer as boolean) ?? true}
+                onCheckedChange={(v) => {
+                  set('is_exempt_dealer', v);
+                  if (v) set('vat_rate', 0);
+                }}
               />
             </div>
             <div className="space-y-2">
-              <Label>ביטוח לאומי (%)</Label>
+              <Label>נקודות זיכוי</Label>
               <Input
                 type="number"
-                value={(currentSettings?.social_security_rate as number) || ''}
-                onChange={(e) => set('social_security_rate', Number(e.target.value))}
-                placeholder="12.83"
+                step="0.25"
+                value={(currentSettings?.credit_points as number) ?? 2.75}
+                onChange={(e) => set('credit_points', Number(e.target.value))}
+                placeholder="2.75"
               />
-            </div>
-            <div className="space-y-2">
-              <Label>מע&quot;מ (%)</Label>
-              <Input
-                type="number"
-                value={(currentSettings?.vat_rate as number) || ''}
-                onChange={(e) => set('vat_rate', Number(e.target.value))}
-                placeholder="17"
-              />
+              <p className="text-[11px] text-white/40">ברירת מחדל: 2.75 (גבר רווק)</p>
             </div>
           </div>
+
+          {/* Row 2: Locality credit */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>זיכוי יישוב מוטב (%)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.locality_credit_rate as number) ?? 16}
+                onChange={(e) => set('locality_credit_rate', Number(e.target.value))}
+                placeholder="16"
+              />
+              <p className="text-[11px] text-white/40">נתיבות: 16%</p>
+            </div>
+            <div className="space-y-2">
+              <Label>תקרת הכנסה שנתית לזיכוי</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.locality_credit_ceiling as number) ?? 226560}
+                onChange={(e) => set('locality_credit_ceiling', Number(e.target.value))}
+                placeholder="226560"
+              />
+              <p className="text-[11px] text-white/40">נתיבות 2026: ₪226,560</p>
+            </div>
+          </div>
+
+          {/* Row 3: VAT override (only if not exempt) */}
+          {!(currentSettings?.is_exempt_dealer ?? true) && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>מע&quot;מ (%)</Label>
+                <Input
+                  type="number"
+                  value={(currentSettings?.vat_rate as number) || ''}
+                  onChange={(e) => set('vat_rate', Number(e.target.value))}
+                  placeholder="17"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-3">
             <p className="text-xs text-amber-300">
-              📊 שיעורי המס ישמשו לחישוב חבות מס משוערת ולהמלצות על הפרשות חודשיות.
+              📊 מס הכנסה מחושב אוטומטית לפי מדרגות מס 2026 + זיכוי יישוב מוטב. ביטוח לאומי + בריאות מחושב לפי מדרגות עצמאי.
             </p>
           </div>
         </CardContent>
