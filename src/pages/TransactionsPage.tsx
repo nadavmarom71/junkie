@@ -966,10 +966,10 @@ function ExpandableTransactionCard({
               {tx.type === 'income' ? 'הכנסה' : 'הוצאה'}
             </span>
             <PaymentStatusBadge status={tx.payment_status} />
-            {/* Show green paid + yellow remaining when partial payment exists */}
+            {/* Amount — color reflects payment status for income */}
             {isIncome && tx.project_total != null && Number(tx.project_total) > Number(tx.amount) ? (
               <div className="flex items-center gap-1.5">
-                <span className="text-base font-bold text-green-400">
+                <span className={`text-base font-bold ${tx.payment_status === 'paid' ? 'text-green-400' : 'text-yellow-400'}`}>
                   +₪{Number(tx.amount).toLocaleString('he-IL')}
                 </span>
                 <span className="text-xs font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/25 px-1.5 py-0.5 rounded-full">
@@ -977,7 +977,7 @@ function ExpandableTransactionCard({
                 </span>
               </div>
             ) : (
-              <span className={`text-base font-bold ${isIncome ? 'text-green-400' : 'text-red-400'}`}>
+              <span className={`text-base font-bold ${isIncome ? (tx.payment_status === 'paid' ? 'text-green-400' : 'text-yellow-400') : 'text-red-400'}`}>
                 {isIncome ? '+' : '-'}₪{Number(tx.amount).toLocaleString('he-IL')}
               </span>
             )}
