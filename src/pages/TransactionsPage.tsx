@@ -22,6 +22,7 @@ import {
   useUpdatePaymentStatus,
   useUpdateTransaction,
 } from '@/hooks/useTransactions';
+import { useClients, useCreateClient } from '@/hooks/useClients';
 import { formatCurrency, formatDateShort } from '@/lib/formatters';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -173,6 +174,11 @@ function PaymentStatusBadge({ status }: { status?: string }) {
 
 function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void; defaultType?: 'income' | 'expense' }) {
   const createMutation = useCreateTransaction();
+  const { data: clients } = useClients();
+  const createClientMutation = useCreateClient();
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [showNewClient, setShowNewClient] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
   const [partnerSplit, setPartnerSplit] = useState('');
   const [projectTotal, setProjectTotal] = useState('');
   const [installments, setInstallments] = useState<Installment[]>([]);
@@ -199,6 +205,19 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
     setInstallments(prev => prev.map((inst, i) => i === idx ? { ...inst, ...patch } : inst));
   }
 
+  async function handleCreateNewClient() {
+    if (!newClientName.trim()) return;
+    try {
+      const created = await createClientMutation.mutateAsync({ name: newClientName.trim() });
+      setSelectedClientId(created.id);
+      setShowNewClient(false);
+      setNewClientName('');
+      toast.success(`לקוח "${created.name}" נוצר!`);
+    } catch (e) {
+      toast.error(String(e));
+    }
+  }
+
   async function onSubmit(values: Record<string, unknown>) {
     const typedValues = values as BusinessForm;
     try {
@@ -207,6 +226,7 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
         : null;
       const createData = {
         ...typedValues,
+        client_id: selectedClientId || null,
         ...(isIncome && {
           partner_split_pct: partnerSplit !== '' ? parseFloat(partnerSplit) : null,
           project_total: projectTotal !== '' ? parseFloat(projectTotal) : null,
@@ -247,6 +267,60 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
         <Input className="mt-1" placeholder="לדוגמה: פרויקט עיצוב עבור לקוח ABC" {...register('description')} />
         {errors.description && <p className="text-xs text-red-500 mt-0.5">{errors.description.message}</p>}
       </div>
+
+      {/* Client selector */}
+      <div>
+        <label className="text-sm font-medium">לקוח (אופציונלי)</label>
+        {!showNewClient ? (
+          <div className="flex gap-2 mt-1">
+            <Select value={selectedClientId} onValueChange={(v: string) => setSelectedClientId(v === '_none' ? '' : v)}>
+              <SelectTrigger className="flex-1"><SelectValue placeholder="בחר לקוח..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">ללא לקוח</SelectItem>
+                {clients?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="flex-shrink-0"
+              onClick={() => setShowNewClient(true)}
+              title="הוסף לקוח חדש"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex gap-2 mt-1">
+            <Input
+              className="flex-1"
+              placeholder="שם לקוח חדש..."
+              value={newClientName}
+              onChange={e => setNewClientName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateNewClient(); } }}
+              autoFocus
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleCreateNewClient}
+              disabled={!newClientName.trim() || createClientMutation.isPending}
+            >
+              {createClientMutation.isPending ? '...' : 'צור'}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => { setShowNewClient(false); setNewClientName(''); }}
+            >
+              <XIcon className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-sm font-medium">קטגוריה</label>
@@ -422,6 +496,11 @@ function PersonalExpenseForm({ onClose }: { onClose: () => void }) {
 
 function EditTransactionDialog({ tx, onClose }: { tx: BusinessTransaction; onClose: () => void }) {
   const updateMutation = useUpdateTransaction();
+  const { data: clients } = useClients();
+  const createClientMutation = useCreateClient();
+  const [selectedClientId, setSelectedClientId] = useState<string>(tx.client_id ?? '');
+  const [showNewClient, setShowNewClient] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
   const isIncome = tx.type === 'income';
   const [partnerSplit, setPartnerSplit] = useState(tx.partner_split_pct != null ? String(tx.partner_split_pct) : '');
   const [projectTotal, setProjectTotal] = useState(tx.project_total != null ? String(tx.project_total) : '');
@@ -465,6 +544,19 @@ function EditTransactionDialog({ tx, onClose }: { tx: BusinessTransaction; onClo
     setInstallments(prev => prev.map((inst, i) => i === idx ? { ...inst, ...patch } : inst));
   }
 
+  async function handleCreateNewClient() {
+    if (!newClientName.trim()) return;
+    try {
+      const created = await createClientMutation.mutateAsync({ name: newClientName.trim() });
+      setSelectedClientId(created.id);
+      setShowNewClient(false);
+      setNewClientName('');
+      toast.success(`לקוח "${created.name}" נוצר!`);
+    } catch (e) {
+      toast.error(String(e));
+    }
+  }
+
   async function onSubmit(values: Record<string, unknown>) {
     const typed = values as BusinessForm;
     try {
@@ -473,6 +565,7 @@ function EditTransactionDialog({ tx, onClose }: { tx: BusinessTransaction; onClo
         : null;
       const updateData = {
         ...typed,
+        client_id: selectedClientId || null,
         ...(isIncome && {
           partner_split_pct: partnerSplit !== '' ? parseFloat(partnerSplit) : null,
           project_total: projectTotal !== '' ? parseFloat(projectTotal) : null,
@@ -507,6 +600,60 @@ function EditTransactionDialog({ tx, onClose }: { tx: BusinessTransaction; onClo
         <Input className="mt-1" {...register('description')} />
         {errors.description && <p className="text-xs text-red-500 mt-0.5">{errors.description.message}</p>}
       </div>
+
+      {/* Client selector */}
+      <div>
+        <label className="text-sm font-medium">לקוח (אופציונלי)</label>
+        {!showNewClient ? (
+          <div className="flex gap-2 mt-1">
+            <Select value={selectedClientId} onValueChange={(v: string) => setSelectedClientId(v === '_none' ? '' : v)}>
+              <SelectTrigger className="flex-1"><SelectValue placeholder="בחר לקוח..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">ללא לקוח</SelectItem>
+                {clients?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="flex-shrink-0"
+              onClick={() => setShowNewClient(true)}
+              title="הוסף לקוח חדש"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex gap-2 mt-1">
+            <Input
+              className="flex-1"
+              placeholder="שם לקוח חדש..."
+              value={newClientName}
+              onChange={e => setNewClientName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateNewClient(); } }}
+              autoFocus
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleCreateNewClient}
+              disabled={!newClientName.trim() || createClientMutation.isPending}
+            >
+              {createClientMutation.isPending ? '...' : 'צור'}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => { setShowNewClient(false); setNewClientName(''); }}
+            >
+              <XIcon className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-sm font-medium">קטגוריה</label>
