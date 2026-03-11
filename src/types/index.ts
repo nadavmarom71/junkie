@@ -203,6 +203,20 @@ export interface PersonalStats {
   byCategory: Array<{ category: string; amount: number }>;
 }
 
+export interface GoalProgress {
+  target: number;
+  current: number;
+  pct: number;
+}
+
+export interface TaxEstimate {
+  incomeTax?: number;
+  socialSecurity?: number;
+  vat?: number;
+  totalReserve: number;
+  afterTax: number;
+}
+
 export interface DashboardStats {
   kpis: {
     monthlyRevenue: number;
@@ -210,6 +224,12 @@ export interface DashboardStats {
     netProfit: number;
     activeRetainerTotal: number;
   };
+  goals?: {
+    income?: GoalProgress;
+    expenses?: GoalProgress;
+    annual?: GoalProgress;
+  };
+  taxEstimate?: TaxEstimate;
   cashflow: CashflowStats;
   personal: PersonalStats;
   charts: {
