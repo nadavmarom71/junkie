@@ -3,7 +3,7 @@
  * Tracks income/expense splits between Nadav (65%) and David (35%).
  * No external dependencies on the rest of the app.
  */
-import { createContext, useContext, useReducer, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createContext, useContext, useReducer, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import api from '@/lib/api';
 
@@ -167,7 +167,7 @@ export function calcExpenseBreakdown(
   };
 }
 
-// ── Mock Initial Data ─────────────────────────────────────────────────────────
+// ── Default Settings ──────────────────────────────────────────────────────────
 
 const DEFAULT_SETTINGS: PartnershipSettings = {
   taxRate: 12,
@@ -180,64 +180,11 @@ const DEFAULT_SETTINGS: PartnershipSettings = {
   ],
 };
 
-function makeMockData(): { transactions: PartnershipTx[]; settlements: Settlement[] } {
-  const s = DEFAULT_SETTINGS;
-  // Income tx m7 has a linked expense (freelancer ₪400 on a ₪4200 project)
-  const le1: LinkedExpense[] = [
-    { id: 'le_m7_1', description: 'פרילנסר — עריכה', amount: 400, category: 'פרילנסרים', date: '2026-03-06' },
-  ];
-
-  const txs: PartnershipTx[] = [
-    {
-      id: 'm1', type: 'income', date: '2025-12-20',
-      description: 'אתר לקוח — מרמלדה קפה', amount: 8000,
-      breakdown: calcIncomeBreakdown(8000, s), createdAt: '2025-12-20T10:00:00Z',
-    },
-    {
-      id: 'm2', type: 'income', date: '2026-01-15',
-      description: 'סרטון שיווקי — BizCo', amount: 5000,
-      breakdown: calcIncomeBreakdown(5000, s), createdAt: '2026-01-15T10:00:00Z',
-    },
-    {
-      id: 'm3', type: 'expense', date: '2026-01-18',
-      description: 'Adobe Creative Cloud', amount: 500,
-      breakdown: calcExpenseBreakdown(500, 'תוכנות וכלים', 'nadav', 50, true),
-      createdAt: '2026-01-18T12:00:00Z',
-    },
-    {
-      id: 'm4', type: 'expense', date: '2026-01-25',
-      description: 'פרסום Facebook — קמפיין ינואר', amount: 800,
-      breakdown: calcExpenseBreakdown(800, 'שיווק ופרסום', 'nadav', 50, false),
-      createdAt: '2026-01-25T14:00:00Z',
-    },
-    {
-      id: 'm5', type: 'income', date: '2026-02-10',
-      description: 'ייעוץ דיגיטל — StartupX', amount: 3500,
-      breakdown: calcIncomeBreakdown(3500, s), createdAt: '2026-02-10T09:00:00Z',
-    },
-    {
-      id: 'm6', type: 'expense', date: '2026-02-14',
-      description: 'כלים מקצועיים — Figma Pro', amount: 350,
-      breakdown: calcExpenseBreakdown(350, 'תוכנות וכלים', 'david', 50, false),
-      createdAt: '2026-02-14T11:00:00Z',
-    },
-    {
-      id: 'm7', type: 'income', date: '2026-03-05',
-      description: 'מיתוג מחדש — TechStart', amount: 4200,
-      linkedExpenses: le1,
-      breakdown: calcIncomeBreakdown(4200, s, le1),
-      createdAt: '2026-03-05T10:00:00Z',
-    },
-    {
-      id: 'm8', type: 'expense', date: '2026-03-08',
-      description: 'פרילנסר — צלם', amount: 600,
-      breakdown: calcExpenseBreakdown(600, 'פרילנסרים', 'nadav', 50, true),
-      createdAt: '2026-03-08T15:00:00Z',
-    },
-  ];
-
-  return { transactions: txs, settlements: [] };
-}
+const EMPTY_STATE: PartnershipState = {
+  transactions: [],
+  settlements: [],
+  settings: DEFAULT_SETTINGS,
+};
 
 // ── Reducer ────────────────────────────────────────────────────────────────────
 
@@ -349,6 +296,7 @@ interface PartnershipContextValue {
   dispatch: React.Dispatch<Action>;
   computed: ComputedValues;
   computedForMonth: (month: string | 'all') => ComputedValues;
+  isLoading: boolean;
 }
 
 const PartnershipContext = createContext<PartnershipContextValue | null>(null);
@@ -357,55 +305,71 @@ const PartnershipContext = createContext<PartnershipContextValue | null>(null);
 
 const STORAGE_KEY = 'partnership-module-v1';
 
-function getInitialState(): PartnershipState {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as PartnershipState;
-  } catch { /* ignore */ }
-  const { transactions, settlements } = makeMockData();
-  return { transactions, settlements, settings: DEFAULT_SETTINGS };
-}
-
 export function PartnershipProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
+  const [state, dispatch] = useReducer(reducer, EMPTY_STATE);
+  const [isLoading, setIsLoading] = useState(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Track sync lifecycle: 'loading' → 'ready'. Don't save to remote until initial fetch is done.
-  const syncStatusRef = useRef<'loading' | 'ready'>('loading');
-  // Track whether the RESET from fetch should skip triggering a remote save
-  const skipNextSaveRef = useRef(false);
+  // Once true, state changes are persisted. Stays false until initial fetch completes.
+  const readyRef = useRef(false);
 
-  // On mount: fetch remote state from Supabase — overrides localStorage if present
+  // On mount: fetch from Supabase (single source of truth), fallback to localStorage
   useEffect(() => {
-    api.get('/partnership/state').then((res: { data: PartnershipState | null }) => {
-      if (res.data && res.data.transactions) {
-        skipNextSaveRef.current = true; // don't re-save what we just fetched
-        dispatch({ type: 'RESET', payload: res.data });
-      }
-    }).catch(() => { /* offline — use localStorage as fallback */ })
+    let cancelled = false;
+    api.get('/partnership/state')
+      .then((res: { data: PartnershipState | null }) => {
+        if (cancelled) return;
+        if (res.data && res.data.transactions && res.data.transactions.length > 0) {
+          // Supabase has real data — use it
+          dispatch({ type: 'RESET', payload: res.data });
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(res.data));
+        } else {
+          // Supabase empty — try localStorage (but only if it has real user data, not mock)
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+              const parsed = JSON.parse(raw) as PartnershipState;
+              // Check it's not old mock data (mock IDs were m1-m8)
+              const hasMockIds = parsed.transactions?.some(t => /^m\d+$/.test(t.id));
+              if (parsed.transactions?.length > 0 && !hasMockIds) {
+                dispatch({ type: 'RESET', payload: parsed });
+                // Push localStorage data to Supabase so it's persisted
+                api.put('/partnership/state', parsed).catch(() => {});
+              }
+            }
+          } catch { /* ignore corrupt localStorage */ }
+        }
+      })
+      .catch(() => {
+        // Offline — try localStorage
+        if (cancelled) return;
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as PartnershipState;
+            const hasMockIds = parsed.transactions?.some(t => /^m\d+$/.test(t.id));
+            if (parsed.transactions?.length > 0 && !hasMockIds) {
+              dispatch({ type: 'RESET', payload: parsed });
+            }
+          }
+        } catch { /* ignore */ }
+      })
       .finally(() => {
-        syncStatusRef.current = 'ready';
+        if (cancelled) return;
+        readyRef.current = true;
+        setIsLoading(false);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { cancelled = true; };
   }, []);
 
-  // Debounced save to both localStorage and Supabase on every state change
-  const saveToRemote = useCallback((s: PartnershipState) => {
+  // Save to localStorage + Supabase on state changes (only after initial load)
+  useEffect(() => {
+    if (!readyRef.current) return; // Don't save during initial load
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      api.put('/partnership/state', s).catch(() => { /* offline — will sync on next load */ });
-    }, 1000);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    // Don't push to remote until initial fetch completes (prevents mock data overwriting real data)
-    if (syncStatusRef.current !== 'ready') return;
-    if (skipNextSaveRef.current) {
-      skipNextSaveRef.current = false;
-      return;
-    }
-    saveToRemote(state);
-  }, [state, saveToRemote]);
+      api.put('/partnership/state', state).catch(() => {});
+    }, 800);
+  }, [state]);
 
   const computedForMonth = useMemo(() => (month: string | 'all'): ComputedValues => {
     const filtered = month === 'all'
@@ -439,7 +403,7 @@ export function PartnershipProvider({ children }: { children: ReactNode }) {
   const computed = useMemo(() => computedForMonth('all'), [computedForMonth]);
 
   return (
-    <PartnershipContext.Provider value={{ state, dispatch, computed, computedForMonth }}>
+    <PartnershipContext.Provider value={{ state, dispatch, computed, computedForMonth, isLoading }}>
       {children}
     </PartnershipContext.Provider>
   );

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { LayoutDashboard, PlusCircle, ScrollText, Settings } from 'lucide-react';
-import { PartnershipProvider } from '@/modules/partnership/PartnershipContext';
+import { LayoutDashboard, PlusCircle, ScrollText, Settings, Loader2 } from 'lucide-react';
+import { PartnershipProvider, usePartnership } from '@/modules/partnership/PartnershipContext';
 import Dashboard from '@/modules/partnership/Dashboard';
 import AddTransaction from '@/modules/partnership/AddTransaction';
 import History from '@/modules/partnership/History';
@@ -104,9 +104,22 @@ function Header() {
 
 function PartnershipContent() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  const { isLoading } = usePartnership();
 
   function handleNavigate(tab: string) {
     setActiveTab(tab as Tab);
+  }
+
+  if (isLoading) {
+    return (
+      <>
+        <Header />
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'rgba(255,255,255,0.3)' }} />
+          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>טוען נתוני שותפות...</p>
+        </div>
+      </>
+    );
   }
 
   return (
