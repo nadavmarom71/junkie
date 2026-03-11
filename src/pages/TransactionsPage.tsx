@@ -1053,26 +1053,24 @@ function ExpandableTransactionCard({
 
             {/* Payment status toggle (only for income) */}
             {isIncome && (
-              <div className="space-y-2">
-                {tx.payment_status === 'overdue' && (
-                  <div className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-red-500/20 text-red-300 border border-red-500/40">
-                    באיחור — עבר תאריך הגביה הצפוי
-                  </div>
-                )}
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'paid' }); }}
-                    className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'paid' ? 'bg-green-500/30 text-green-300 border border-green-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
-                  >
-                    שולם ✅
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'pending' }); }}
-                    className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'pending' ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
-                  >
-                    ממתין 🟡
-                  </button>
-                </div>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'paid' }); }}
+                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'paid' ? 'bg-green-500/30 text-green-300 border border-green-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
+                >
+                  שולם ✅
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'pending' }); }}
+                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'pending' ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
+                >
+                  ממתין 🟡
+                </button>
+                <span
+                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold ${tx.payment_status === 'overdue' ? 'bg-red-500/30 text-red-300 border border-red-500/50' : 'bg-white/5 text-white/30 border border-white/10 opacity-50'}`}
+                >
+                  באיחור 🔴
+                </span>
               </div>
             )}
             {/* Linked Expenses Section (income only) */}
