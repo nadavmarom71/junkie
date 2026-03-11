@@ -141,6 +141,15 @@
 .anim-6 { animation: fadeUp .55s cubic-bezier(.22,1,.36,1) both 0.45s; }
 .anim-7 { animation: fadeUp .55s cubic-bezier(.22,1,.36,1) both 0.53s; }
 
+/* Bottom sheet slide-up animation */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slideUp 0.25s cubic-bezier(.32,.72,0,1) both;
+}
+
 /* ── Glass Card System ───────────────────────────────────── */
 .glass-card {
   background: var(--glass);

@@ -109,30 +109,17 @@ export default function Sidebar() {
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
 
   return (
-    <>
-      {/* ── Mobile: fixed overlay, slides in/out ── */}
-      <aside
-        className={cn(
-          'fixed right-0 top-0 h-full z-40 w-60 flex flex-col transition-transform duration-300 lg:hidden',
-          sidebarOpen ? 'translate-x-0' : 'translate-x-full'
-        )}
-        style={sidebarStyle}
-      >
-        <SidebarContent onClose={() => setSidebarOpen(false)} closeOnNav={true} />
-      </aside>
-
-      {/* ── Desktop: in-flow flex sibling — width animated here ── */}
-      <aside
-        className={cn(
-          'hidden lg:flex flex-col h-full flex-shrink-0 overflow-hidden transition-[width] duration-300',
-          sidebarOpen ? 'w-60' : 'w-0'
-        )}
-        style={{ ...sidebarStyle, position: 'relative', zIndex: 2 }}
-      >
-        <div className="w-60 h-full flex flex-col">
-          <SidebarContent onClose={() => setSidebarOpen(false)} closeOnNav={false} />
-        </div>
-      </aside>
-    </>
+    /* Desktop only — mobile uses BottomNav exclusively */
+    <aside
+      className={cn(
+        'hidden lg:flex flex-col h-full flex-shrink-0 overflow-hidden transition-[width] duration-300',
+        sidebarOpen ? 'w-60' : 'w-0'
+      )}
+      style={{ ...sidebarStyle, position: 'relative', zIndex: 2 }}
+    >
+      <div className="w-60 h-full flex flex-col">
+        <SidebarContent onClose={() => setSidebarOpen(false)} closeOnNav={false} />
+      </div>
+    </aside>
   );
 }

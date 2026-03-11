@@ -3,8 +3,9 @@
  * Tracks income/expense splits between Nadav (65%) and David (35%).
  * No external dependencies on the rest of the app.
  */
-import { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
+import { createContext, useContext, useReducer, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import api from '@/lib/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -97,7 +98,8 @@ type Action =
   | { type: 'UPDATE_SETTINGS'; payload: Partial<PartnershipSettings> }
   | { type: 'EDIT_TRANSACTION'; payload: EditTxPayload }
   | { type: 'ADD_LINKED_EXPENSE'; payload: { txId: string; expense: LinkedExpense } }
-  | { type: 'REMOVE_LINKED_EXPENSE'; payload: { txId: string; expenseId: string } };
+  | { type: 'REMOVE_LINKED_EXPENSE'; payload: { txId: string; expenseId: string } }
+  | { type: 'RESET'; payload: PartnershipState };
 
 // ── Financial Logic Helpers ────────────────────────────────────────────────────
 
@@ -320,6 +322,9 @@ function reducer(state: PartnershipState, action: Action): PartnershipState {
       };
     }
 
+    case 'RESET':
+      return action.payload;
+
     default:
       return state;
   }
@@ -352,23 +357,50 @@ const PartnershipContext = createContext<PartnershipContextValue | null>(null);
 
 const STORAGE_KEY = 'partnership-module-v1';
 
+function getInitialState(): PartnershipState {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as PartnershipState;
+  } catch { /* ignore */ }
+  const { transactions, settlements } = makeMockData();
+  return { transactions, settlements, settings: DEFAULT_SETTINGS };
+}
+
 export function PartnershipProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(
-    reducer,
-    undefined,
-    (): PartnershipState => {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return JSON.parse(raw) as PartnershipState;
-      } catch { /* ignore */ }
-      const { transactions, settlements } = makeMockData();
-      return { transactions, settlements, settings: DEFAULT_SETTINGS };
-    }
-  );
+  const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
+  const hasFetchedRef = useRef(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextSaveRef = useRef(false);
+
+  // On mount: fetch remote state from Supabase — overrides localStorage if present
+  useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
+    api.get('/partnership/state').then((res: { data: PartnershipState | null }) => {
+      if (res.data && res.data.transactions) {
+        skipNextSaveRef.current = true; // don't re-save what we just fetched
+        dispatch({ type: 'RESET', payload: res.data });
+      }
+    }).catch(() => { /* offline — use localStorage as fallback */ });
+  }, []);
+
+  // Debounced save to both localStorage and Supabase on every state change
+  const saveToRemote = useCallback((s: PartnershipState) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      api.put('/partnership/state', s).catch(() => { /* offline — will sync on next load */ });
+    }, 1000);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
+    saveToRemote(state);
+  }, [state, saveToRemote]);
 
   const computedForMonth = useMemo(() => (month: string | 'all'): ComputedValues => {
     const filtered = month === 'all'

@@ -23,9 +23,10 @@ export default function TopBar() {
       }}
     >
       <div className="flex items-center gap-1">
+        {/* Hamburger — desktop only, mobile uses bottom nav */}
         <button
           onClick={toggleSidebar}
-          className="p-2 rounded-lg transition-colors hover:bg-white/5"
+          className="hidden lg:flex p-2 rounded-lg transition-colors hover:bg-white/5"
           style={{ color: 'var(--t2)' }}
           aria-label="Toggle sidebar"
         >

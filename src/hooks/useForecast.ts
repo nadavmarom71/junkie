@@ -7,9 +7,25 @@ interface RetainerForecastResponse {
   summary: { monthly_total: number; annual_projection: number; retainer_count: number };
 }
 
+interface RevenueForecastBasis {
+  avg_monthly: number;
+  total_past_3_months: number;
+  monthly_trend: number;
+  trend_direction: 'growing' | 'declining' | 'stable';
+  retainer_base: number;
+  volatility: number;
+}
+
+interface HistoryMonth {
+  month: string;
+  income: number;
+  expenses: number;
+}
+
 interface RevenueForecastResponse {
   months: RevenueForecastMonth[];
-  basis: { avg_monthly: number; total_past_3_months: number };
+  basis: RevenueForecastBasis;
+  history: HistoryMonth[];
 }
 
 export function useRetainerForecast() {

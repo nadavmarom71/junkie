@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, Repeat, BadgeDollarSign, DollarSign, ArrowDownLeft, Clock } from 'lucide-react';
+import { TrendingUp, TrendingDown, Repeat, BadgeDollarSign, DollarSign, ArrowDownLeft, Clock, Target, Receipt } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDashboardStats } from '@/hooks/useDashboard';
 
@@ -23,6 +23,27 @@ import RevenueChart from '@/components/dashboard/RevenueChart';
 import ExpensesByCategoryChart from '@/components/dashboard/ExpensesByCategoryChart';
 import AiInsightsWidget from '@/components/dashboard/AiInsightsWidget';
 import UpcomingPayments from '@/components/dashboard/UpcomingPayments';
+
+function GoalBar({ label, current, target, pct, color, inverted }: {
+  label: string; current: number; target: number; pct: number; color: string; inverted?: boolean;
+}) {
+  const clampedPct = Math.min(pct, 100);
+  const isOk = inverted ? pct < 80 : pct >= 80;
+  const statusColor = isOk ? '#22c55e' : pct >= 50 || (inverted && pct < 100) ? '#eab308' : '#f43f5e';
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-xs font-medium" style={{ color: 'var(--t2)' }}>{label}</span>
+        <span className="text-xs font-bold" style={{ color: statusColor }}>
+          ₪{current.toLocaleString('he-IL')} / ₪{target.toLocaleString('he-IL')} ({pct}%)
+        </span>
+      </div>
+      <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+        <div className="h-full rounded-full transition-all" style={{ width: `${clampedPct}%`, background: color, opacity: 0.8 }} />
+      </div>
+    </div>
+  );
+}
 
 function DashboardSkeleton() {
   const box = { background: 'rgba(255,255,255,0.06)', borderRadius: 12 } as const;
@@ -182,6 +203,59 @@ export default function DashboardPage() {
               sparkPoints={[{x:0,y:8},{x:23,y:12},{x:47,y:6},{x:70,y:14}]}
             />
           </div>
+
+          {/* Goal Progress */}
+          {data.goals && Object.keys(data.goals).length > 0 && (
+            <div className="rounded-xl p-4 anim-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                <Target size={16} className="text-emerald-400" />
+                התקדמות יעדים
+              </h3>
+              <div className="space-y-3">
+                {data.goals.income && (
+                  <GoalBar label="הכנסה חודשית" current={data.goals.income.current} target={data.goals.income.target} pct={data.goals.income.pct} color="#22c55e" />
+                )}
+                {data.goals.expenses && (
+                  <GoalBar label="תקציב הוצאות" current={data.goals.expenses.current} target={data.goals.expenses.target} pct={data.goals.expenses.pct} color="#f43f5e" inverted />
+                )}
+                {data.goals.annual && (
+                  <GoalBar label="הכנסה שנתית" current={data.goals.annual.current} target={data.goals.annual.target} pct={data.goals.annual.pct} color="#3b82f6" />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Tax Estimate */}
+          {data.taxEstimate && data.taxEstimate.totalReserve > 0 && (
+            <div className="rounded-xl p-4 anim-2" style={{ background: 'rgba(234,179,8,0.04)', border: '1px solid rgba(234,179,8,0.12)' }}>
+              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                <Receipt size={16} className="text-amber-400" />
+                הפרשת מס משוערת — החודש
+              </h3>
+              <div className="flex gap-4 flex-wrap">
+                {data.taxEstimate.incomeTax > 0 && (
+                  <div className="text-center">
+                    <div className="text-xs" style={{ color: 'var(--t2)' }}>מס הכנסה</div>
+                    <div className="text-lg font-bold text-amber-400">₪{data.taxEstimate.incomeTax.toLocaleString('he-IL')}</div>
+                  </div>
+                )}
+                {data.taxEstimate.socialSecurity > 0 && (
+                  <div className="text-center">
+                    <div className="text-xs" style={{ color: 'var(--t2)' }}>ביטוח לאומי</div>
+                    <div className="text-lg font-bold text-amber-400">₪{data.taxEstimate.socialSecurity.toLocaleString('he-IL')}</div>
+                  </div>
+                )}
+                <div className="text-center">
+                  <div className="text-xs" style={{ color: 'var(--t2)' }}>סה״כ להפרשה</div>
+                  <div className="text-lg font-bold text-red-400">₪{data.taxEstimate.totalReserve.toLocaleString('he-IL')}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs" style={{ color: 'var(--t2)' }}>נטו אחרי מס</div>
+                  <div className="text-lg font-bold text-emerald-400">₪{data.taxEstimate.afterTax.toLocaleString('he-IL')}</div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 30-day Forecast */}
           {data.cashflow?.forecast && (

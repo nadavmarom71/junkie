@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Bell, Brain, Download, Tag, Save } from 'lucide-react';
+import { Settings, Bell, Brain, Download, Tag, Save, Target, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -118,6 +118,100 @@ export default function SettingsPage() {
                 placeholder="8000"
               />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Financial Goals */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            יעדים פיננסיים
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>יעד חיסכון חודשי (₪)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.savings_target as number) || ''}
+                onChange={(e) => set('savings_target', Number(e.target.value))}
+                placeholder="3000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>יעד קרן חירום (₪)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.emergency_fund_target as number) || ''}
+                onChange={(e) => set('emergency_fund_target', Number(e.target.value))}
+                placeholder="50000"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>יעד הכנסה שנתי (₪)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.annual_income_goal as number) || ''}
+                onChange={(e) => set('annual_income_goal', Number(e.target.value))}
+                placeholder="300000"
+              />
+            </div>
+          </div>
+          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-md p-3">
+            <p className="text-xs text-emerald-300">
+              🎯 היעדים שלך ישמשו את ה-AI לניתוח יומי ולהמלצות מותאמות אישית. הם יופיעו גם בלוח המחוונים.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tax Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Receipt className="h-4 w-4" />
+            הגדרות מס
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>מס הכנסה (%)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.income_tax_rate as number) || ''}
+                onChange={(e) => set('income_tax_rate', Number(e.target.value))}
+                placeholder="31"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>ביטוח לאומי (%)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.social_security_rate as number) || ''}
+                onChange={(e) => set('social_security_rate', Number(e.target.value))}
+                placeholder="12.83"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>מע&quot;מ (%)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.vat_rate as number) || ''}
+                onChange={(e) => set('vat_rate', Number(e.target.value))}
+                placeholder="17"
+              />
+            </div>
+          </div>
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-3">
+            <p className="text-xs text-amber-300">
+              📊 שיעורי המס ישמשו לחישוב חבות מס משוערת ולהמלצות על הפרשות חודשיות.
+            </p>
           </div>
         </CardContent>
       </Card>
