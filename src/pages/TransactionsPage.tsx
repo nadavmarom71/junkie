@@ -179,6 +179,7 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [showNewClient, setShowNewClient] = useState(false);
   const [newClientName, setNewClientName] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState<'paid' | 'pending'>('paid');
   const [partnerSplit, setPartnerSplit] = useState('');
   const [projectTotal, setProjectTotal] = useState('');
   const [installments, setInstallments] = useState<Installment[]>([]);
@@ -227,6 +228,7 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
       const createData = {
         ...typedValues,
         client_id: selectedClientId || null,
+        ...(isIncome && { payment_status: paymentStatus }),
         ...(isIncome && {
           partner_split_pct: partnerSplit !== '' ? parseFloat(partnerSplit) : null,
           project_total: projectTotal !== '' ? parseFloat(projectTotal) : null,
@@ -341,6 +343,29 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
         <label className="text-sm font-medium">הערות (אופציונלי)</label>
         <Input className="mt-1" {...register('notes')} />
       </div>
+
+      {/* Payment status — income only */}
+      {isIncome && (
+        <div>
+          <label className="text-sm font-medium">סטטוס תשלום</label>
+          <div className="flex gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => setPaymentStatus('paid')}
+              className={`flex-1 text-sm px-3 py-2 rounded-lg font-semibold transition-colors ${paymentStatus === 'paid' ? 'bg-green-500/30 text-green-300 border border-green-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10 border border-white/10'}`}
+            >
+              שולם ✅
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentStatus('pending')}
+              className={`flex-1 text-sm px-3 py-2 rounded-lg font-semibold transition-colors ${paymentStatus === 'pending' ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10 border border-white/10'}`}
+            >
+              ממתין 🟡
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Partial payment section — income only */}
       {isIncome && (
@@ -1024,12 +1049,6 @@ function ExpandableTransactionCard({
                   className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'pending' ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
                 >
                   ממתין 🟡
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); updatePaymentStatus.mutate({ id: tx.id, payment_status: 'overdue' }); }}
-                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${tx.payment_status === 'overdue' ? 'bg-red-500/30 text-red-300 border border-red-500/50' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
-                >
-                  באיחור 🔴
                 </button>
               </div>
             )}
