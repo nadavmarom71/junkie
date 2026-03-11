@@ -233,16 +233,16 @@ export default function DashboardPage() {
                 הפרשת מס משוערת — החודש
               </h3>
               <div className="flex gap-4 flex-wrap">
-                {data.taxEstimate.incomeTax > 0 && (
+                {(data.taxEstimate.incomeTax ?? 0) > 0 && (
                   <div className="text-center">
                     <div className="text-xs" style={{ color: 'var(--t2)' }}>מס הכנסה</div>
-                    <div className="text-lg font-bold text-amber-400">₪{data.taxEstimate.incomeTax.toLocaleString('he-IL')}</div>
+                    <div className="text-lg font-bold text-amber-400">₪{(data.taxEstimate.incomeTax ?? 0).toLocaleString('he-IL')}</div>
                   </div>
                 )}
-                {data.taxEstimate.socialSecurity > 0 && (
+                {(data.taxEstimate.socialSecurity ?? 0) > 0 && (
                   <div className="text-center">
                     <div className="text-xs" style={{ color: 'var(--t2)' }}>ביטוח לאומי</div>
-                    <div className="text-lg font-bold text-amber-400">₪{data.taxEstimate.socialSecurity.toLocaleString('he-IL')}</div>
+                    <div className="text-lg font-bold text-amber-400">₪{(data.taxEstimate.socialSecurity ?? 0).toLocaleString('he-IL')}</div>
                   </div>
                 )}
                 <div className="text-center">
