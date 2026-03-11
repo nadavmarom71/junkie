@@ -368,21 +368,24 @@ function getInitialState(): PartnershipState {
 
 export function PartnershipProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
-  const hasFetchedRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track sync lifecycle: 'loading' → 'ready'. Don't save to remote until initial fetch is done.
+  const syncStatusRef = useRef<'loading' | 'ready'>('loading');
+  // Track whether the RESET from fetch should skip triggering a remote save
   const skipNextSaveRef = useRef(false);
 
   // On mount: fetch remote state from Supabase — overrides localStorage if present
   useEffect(() => {
-    if (hasFetchedRef.current) return;
-    hasFetchedRef.current = true;
-
     api.get('/partnership/state').then((res: { data: PartnershipState | null }) => {
       if (res.data && res.data.transactions) {
         skipNextSaveRef.current = true; // don't re-save what we just fetched
         dispatch({ type: 'RESET', payload: res.data });
       }
-    }).catch(() => { /* offline — use localStorage as fallback */ });
+    }).catch(() => { /* offline — use localStorage as fallback */ })
+      .finally(() => {
+        syncStatusRef.current = 'ready';
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Debounced save to both localStorage and Supabase on every state change
@@ -395,6 +398,8 @@ export function PartnershipProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Don't push to remote until initial fetch completes (prevents mock data overwriting real data)
+    if (syncStatusRef.current !== 'ready') return;
     if (skipNextSaveRef.current) {
       skipNextSaveRef.current = false;
       return;

@@ -57,12 +57,12 @@ export default function KpiCard({
       </div>
 
       {/* Label */}
-      <div className="text-[15px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--t2)' }}>
+      <div className="text-[13px] sm:text-[15px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--t2)' }}>
         {title}
       </div>
 
       {/* Value */}
-      <div className="text-[32px] font-extrabold tracking-tight leading-none mb-2" style={{ color: colors.value }}>
+      <div className="text-[27px] sm:text-[32px] font-extrabold tracking-tight leading-none mb-2" style={{ color: colors.value }}>
         {displayValue}
       </div>
 
