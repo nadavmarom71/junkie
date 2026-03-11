@@ -16,7 +16,7 @@ export default function AppLayout() {
   const showOverlay = !hasLoadedOnce && dashLoading;
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }} dir="rtl">
+    <div className="flex h-dvh overflow-hidden" style={{ background: 'var(--bg)', touchAction: 'pan-y', overscrollBehaviorX: 'none' }} dir="rtl">
       {/* Smart Loading Overlay — first load only */}
       <SmartLoadingOverlay isLoading={showOverlay} />
 
