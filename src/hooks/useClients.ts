@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import type { Client, CreateClientInput } from '@/types';
+import type { Client, CreateClientInput, ClientProfitability } from '@/types';
 
 export const CLIENTS_KEY = 'clients';
 
@@ -40,6 +40,14 @@ export function useDeleteClient() {
   return useMutation<void, Error, string>({
     mutationFn: (id) => api.delete(`/clients/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: [CLIENTS_KEY] }),
+  });
+}
+
+export function useClientProfitability(id: string) {
+  return useQuery<ClientProfitability>({
+    queryKey: [CLIENTS_KEY, id, 'profitability'],
+    queryFn: () => api.get(`/clients/${id}/profitability`),
+    enabled: !!id,
   });
 }
 

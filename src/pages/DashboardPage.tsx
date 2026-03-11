@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { TrendingUp, TrendingDown, Repeat, BadgeDollarSign, DollarSign, ArrowDownLeft, Clock, Target, Receipt } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { TrendingUp, TrendingDown, Repeat, BadgeDollarSign, DollarSign, ArrowDownLeft, Clock, Target, Receipt, Sparkles, X } from 'lucide-react';
+import api from '@/lib/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDashboardStats } from '@/hooks/useDashboard';
 
@@ -79,6 +80,17 @@ export default function DashboardPage() {
     localStorage.setItem('dashboard-tab', tab);
   };
 
+  // Coaching prompt — fetch once per session
+  const [coachingPrompt, setCoachingPrompt] = useState<string | null>(null);
+  useEffect(() => {
+    if (sessionStorage.getItem('coaching-dismissed')) return;
+    api.get('/insights/coaching')
+      .then((res: { data: { prompt: string; type: string } | null }) => {
+        if (res.data?.prompt) setCoachingPrompt(res.data.prompt);
+      })
+      .catch(() => {});
+  }, []);
+
   if (isLoading) return <DashboardSkeleton />;
   if (error) {
     return (
@@ -97,6 +109,23 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      {/* Coaching Prompt */}
+      {coachingPrompt && (
+        <div
+          className="rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500"
+          style={{ background: 'linear-gradient(135deg, rgba(106,163,255,0.1), rgba(168,85,247,0.08))', border: '1px solid rgba(106,163,255,0.2)' }}
+        >
+          <Sparkles size={18} className="text-blue-400 mt-0.5 shrink-0" />
+          <p className="text-sm text-white/80 flex-1 leading-relaxed">{coachingPrompt}</p>
+          <button
+            onClick={() => { setCoachingPrompt(null); sessionStorage.setItem('coaching-dismissed', '1'); }}
+            className="text-white/30 hover:text-white/60 transition-colors shrink-0"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="anim-1 flex items-start justify-between flex-wrap gap-3">
         <div>

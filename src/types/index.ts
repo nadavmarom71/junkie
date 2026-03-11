@@ -259,6 +259,26 @@ export interface ScheduledPayment {
   created_at: string;
 }
 
+// ── Client Profitability ─────────────────────────────────────────────────────
+
+export interface ClientProfitability {
+  client: string;
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
+  profitMargin: number;
+  avgDealSize: number;
+  monthlyAvg: number;
+  transactionCount: number;
+  incomeCount: number;
+  monthsActive: number;
+  firstTransaction: string | null;
+  lastTransaction: string | null;
+  hasRetainer: boolean;
+  retainerAmount: number;
+  monthlyBreakdown: Array<{ month: string; income: number; expenses: number; net: number }>;
+}
+
 // ── Forecast ──────────────────────────────────────────────────────────────────
 
 export interface RetainerForecastMonth {

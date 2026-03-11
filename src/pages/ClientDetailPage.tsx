@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowRight, Sparkles, Brain, FileText, BarChart3 } from 'lucide-react';
+import { ArrowRight, Sparkles, Brain, FileText, BarChart3, TrendingUp, Calendar, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { useClient, useClientAiRecommendation } from '@/hooks/useClients';
+import { useClient, useClientProfitability, useClientAiRecommendation } from '@/hooks/useClients';
 import { formatCurrency, formatDateShort } from '@/lib/formatters';
 import { toast } from 'sonner';
 import type { BusinessTransaction } from '@/types';
@@ -14,6 +14,7 @@ export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: client, isLoading } = useClient(id!);
+  const { data: profitability } = useClientProfitability(id!);
   const aiRecommendation = useClientAiRecommendation();
   const [recommendation, setRecommendation] = useState<string | null>(null);
 
@@ -90,6 +91,96 @@ export default function ClientDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Client Profitability */}
+      {profitability && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-emerald-400" />
+              רווחיות לקוח
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Key metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="rounded-lg p-3" style={{ background: 'rgba(0,196,140,0.06)' }}>
+                <p className="text-xs text-white/50">הכנסות נטו</p>
+                <p className="text-lg font-bold text-emerald-400">{formatCurrency(profitability.totalRevenue)}</p>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: 'rgba(244,63,94,0.06)' }}>
+                <p className="text-xs text-white/50">הוצאות</p>
+                <p className="text-lg font-bold text-red-400">{formatCurrency(profitability.totalExpenses)}</p>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: profitability.netProfit >= 0 ? 'rgba(0,196,140,0.06)' : 'rgba(244,63,94,0.06)' }}>
+                <p className="text-xs text-white/50">רווח נקי</p>
+                <p className={`text-lg font-bold ${profitability.netProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {formatCurrency(profitability.netProfit)}
+                </p>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: 'rgba(106,163,255,0.06)' }}>
+                <p className="text-xs text-white/50">מרווח רווח</p>
+                <p className={`text-lg font-bold ${profitability.profitMargin >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                  {profitability.profitMargin}%
+                </p>
+              </div>
+            </div>
+
+            {/* Secondary stats */}
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex items-center gap-1.5">
+                <BarChart3 className="h-3.5 w-3.5 text-white/40" />
+                <span className="text-white/50">ממוצע לעסקה:</span>
+                <span className="font-semibold text-white">{formatCurrency(profitability.avgDealSize)}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-white/40" />
+                <span className="text-white/50">ממוצע חודשי:</span>
+                <span className="font-semibold text-white">{formatCurrency(profitability.monthlyAvg)}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-white/40" />
+                <span className="text-white/50">חודשים פעילים:</span>
+                <span className="font-semibold text-white">{profitability.monthsActive}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Repeat className="h-3.5 w-3.5 text-white/40" />
+                <span className="text-white/50">ריטיינר:</span>
+                {profitability.hasRetainer ? (
+                  <Badge variant="default" className="text-xs">פעיל — {formatCurrency(profitability.retainerAmount)}</Badge>
+                ) : (
+                  <span className="text-white/40">אין</span>
+                )}
+              </div>
+            </div>
+
+            {/* Monthly breakdown */}
+            {profitability.monthlyBreakdown.length > 1 && (
+              <div>
+                <p className="text-xs text-white/50 mb-2">פירוט חודשי</p>
+                <div className="space-y-1.5">
+                  {profitability.monthlyBreakdown.slice(-6).map((m) => (
+                    <div key={m.month} className="flex items-center gap-2 text-xs">
+                      <span className="text-white/40 w-16 shrink-0">{m.month}</span>
+                      <div className="flex-1 h-4 rounded-full overflow-hidden flex" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                        {m.income > 0 && (
+                          <div
+                            className="h-full bg-emerald-500/60"
+                            style={{ width: `${Math.min(100, (m.income / Math.max(m.income, m.expenses)) * 100)}%` }}
+                          />
+                        )}
+                      </div>
+                      <span className={`font-semibold w-20 text-left ${m.net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {formatCurrency(m.net)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Recommendation */}
       <Card>
