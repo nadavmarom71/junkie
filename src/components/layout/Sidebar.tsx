@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, Lightbulb, Users,
-  TrendingUp, FileText, Repeat, Settings, X, Banknote, Users2,
+  TrendingUp, FileText, Repeat, Settings, X, Banknote, Users2, Target,
 } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ const navItems = [
   { to: '/retainers',    icon: Repeat,           label: 'ריטיינרים',     accent: undefined },
   { to: '/forecast',     icon: TrendingUp,       label: 'תחזית',         accent: undefined },
   { to: '/reports',      icon: FileText,         label: 'דוחות',         accent: undefined },
+  { to: '/goals',        icon: Target,           label: 'יעדים',         accent: '#22c55e' },
   { to: '/settings',     icon: Settings,         label: 'הגדרות',        accent: undefined },
   { to: '/partnership',  icon: Users2,           label: 'השותפות שלך',   accent: '#7c3aed' },
 ];

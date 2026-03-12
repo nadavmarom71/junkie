@@ -104,7 +104,7 @@ export default function SettingsPage() {
               <Label>מטרת הכנסה חודשית (₪)</Label>
               <Input
                 type="number"
-                value={(currentSettings?.monthly_income_goal as number) || ''}
+                value={(currentSettings?.monthly_income_goal as number) ?? ''}
                 onChange={(e) => set('monthly_income_goal', Number(e.target.value))}
                 placeholder="25000"
               />
@@ -113,7 +113,7 @@ export default function SettingsPage() {
               <Label>תקציב הוצאות חודשי (₪)</Label>
               <Input
                 type="number"
-                value={(currentSettings?.monthly_expense_budget as number) || ''}
+                value={(currentSettings?.monthly_expense_budget as number) ?? ''}
                 onChange={(e) => set('monthly_expense_budget', Number(e.target.value))}
                 placeholder="8000"
               />
@@ -136,35 +136,112 @@ export default function SettingsPage() {
               <Label>יעד חיסכון חודשי (₪)</Label>
               <Input
                 type="number"
-                value={(currentSettings?.savings_target as number) || ''}
-                onChange={(e) => set('savings_target', Number(e.target.value))}
+                value={(currentSettings?.monthly_savings_goal as number) ?? ''}
+                onChange={(e) => set('monthly_savings_goal', Number(e.target.value))}
                 placeholder="3000"
               />
             </div>
             <div className="space-y-2">
-              <Label>יעד קרן חירום (₪)</Label>
-              <Input
-                type="number"
-                value={(currentSettings?.emergency_fund_target as number) || ''}
-                onChange={(e) => set('emergency_fund_target', Number(e.target.value))}
-                placeholder="50000"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
               <Label>יעד הכנסה שנתי (₪)</Label>
               <Input
                 type="number"
-                value={(currentSettings?.annual_income_goal as number) || ''}
+                value={(currentSettings?.annual_income_goal as number) ?? ''}
                 onChange={(e) => set('annual_income_goal', Number(e.target.value))}
                 placeholder="300000"
               />
             </div>
           </div>
+
+          <p className="text-sm font-semibold pt-2" style={{ color: 'var(--t2)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>קרן חירום</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>מספר חודשי הוצאות לכיסוי</Label>
+              <Input
+                type="number"
+                min="1"
+                max="24"
+                value={(currentSettings?.emergency_fund_months as number) ?? 6}
+                onChange={(e) => set('emergency_fund_months', Number(e.target.value))}
+                placeholder="6"
+              />
+              <p className="text-[11px] text-white/40">היעד מחושב אוטומטית: ממוצע הוצאות אישיות × מספר חודשים</p>
+            </div>
+            <div className="space-y-2">
+              <Label>יתרה נוכחית בקרן חירום (₪)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.emergency_fund_target as number) ?? ''}
+                onChange={(e) => set('emergency_fund_target', Number(e.target.value))}
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <p className="text-sm font-semibold pt-2" style={{ color: 'var(--t2)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>חיסכון לטווח ארוך</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>יעד פנסיה (₪)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.pension_fund_target as number) ?? ''}
+                onChange={(e) => set('pension_fund_target', Number(e.target.value))}
+                placeholder="500000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>יתרה נוכחית — פנסיה (₪)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.pension_fund_current as number) ?? ''}
+                onChange={(e) => set('pension_fund_current', Number(e.target.value))}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>יעד קרן השתלמות (₪)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.study_fund_target as number) ?? ''}
+                onChange={(e) => set('study_fund_target', Number(e.target.value))}
+                placeholder="100000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>יתרה נוכחית — קרן השתלמות (₪)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.study_fund_current as number) ?? ''}
+                onChange={(e) => set('study_fund_current', Number(e.target.value))}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>יעד תיק השקעות (₪)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.investment_portfolio_target as number) ?? ''}
+                onChange={(e) => set('investment_portfolio_target', Number(e.target.value))}
+                placeholder="300000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>יתרה נוכחית — תיק השקעות (₪)</Label>
+              <Input
+                type="number"
+                value={(currentSettings?.investment_portfolio_current as number) ?? ''}
+                onChange={(e) => set('investment_portfolio_current', Number(e.target.value))}
+                placeholder="0"
+              />
+            </div>
+          </div>
+
           <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-md p-3">
             <p className="text-xs text-emerald-300">
-              🎯 היעדים שלך ישמשו את ה-AI לניתוח יומי ולהמלצות מותאמות אישית. הם יופיעו גם בלוח המחוונים.
+              🎯 היעדים שלך ישמשו את ה-AI לניתוח יומי ולהמלצות מותאמות אישית. עדכן את היתרות הנוכחיות באופן ידני כשאתה מפקיד.
             </p>
           </div>
         </CardContent>
@@ -238,7 +315,7 @@ export default function SettingsPage() {
                 <Label>מע&quot;מ (%)</Label>
                 <Input
                   type="number"
-                  value={(currentSettings?.vat_rate as number) || ''}
+                  value={(currentSettings?.vat_rate as number) ?? ''}
                   onChange={(e) => set('vat_rate', Number(e.target.value))}
                   placeholder="17"
                 />

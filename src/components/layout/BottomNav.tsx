@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, Banknote, Plus, TrendingUp,
   TrendingDown, ShoppingCart, MoreHorizontal, Lightbulb, Users,
-  Repeat, FileText, Settings, Users2, X, TrendingUp as ForecastIcon,
+  Repeat, FileText, Settings, Users2, X, TrendingUp as ForecastIcon, Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +21,7 @@ const MORE_ITEMS = [
   { to: '/retainers',   icon: Repeat,       label: 'ריטיינרים',    accent: undefined },
   { to: '/forecast',    icon: ForecastIcon, label: 'תחזית',        accent: undefined },
   { to: '/reports',     icon: FileText,     label: 'דוחות',        accent: undefined },
+  { to: '/goals',       icon: Target,       label: 'יעדים',        accent: '#22c55e' },
   { to: '/settings',    icon: Settings,     label: 'הגדרות',       accent: undefined },
   { to: '/partnership', icon: Users2,       label: 'השותפות שלך',  accent: '#7c3aed' },
 ];

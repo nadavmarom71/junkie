@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Repeat, BadgeDollarSign, DollarSign, ArrowDownLeft, Clock, Target, Receipt, Sparkles, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { TrendingUp, TrendingDown, Repeat, BadgeDollarSign, DollarSign, ArrowDownLeft, Clock, Target, Receipt, Sparkles, X, ArrowLeft } from 'lucide-react';
 import api from '@/lib/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDashboardStats } from '@/hooks/useDashboard';
@@ -236,10 +237,16 @@ export default function DashboardPage() {
           {/* Goal Progress */}
           {data.goals && Object.keys(data.goals).length > 0 && (
             <div className="rounded-xl p-4 anim-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
-                <Target size={16} className="text-emerald-400" />
-                התקדמות יעדים
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <Target size={16} className="text-emerald-400" />
+                  התקדמות יעדים
+                </h3>
+                <Link to="/goals" className="text-xs flex items-center gap-1 hover:text-white transition-colors" style={{ color: 'var(--t3)' }}>
+                  לכל היעדים
+                  <ArrowLeft size={12} />
+                </Link>
+              </div>
               <div className="space-y-3">
                 {data.goals.income && (
                   <GoalBar label="הכנסה חודשית" current={data.goals.income.current} target={data.goals.income.target} pct={data.goals.income.pct} color="#22c55e" />

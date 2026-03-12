@@ -13,6 +13,7 @@ import ReportsPage from '@/pages/ReportsPage';
 import RetainersPage from '@/pages/RetainersPage';
 import RetainerDetailPage from '@/pages/RetainerDetailPage';
 import SettingsPage from '@/pages/SettingsPage';
+import GoalsPage from '@/pages/GoalsPage';
 import CollectionsPage from '@/pages/CollectionsPage';
 import PartnershipPage from '@/pages/PartnershipPage';
 
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
       { path: 'reports', element: <ReportsPage /> },
       { path: 'retainers', element: <RetainersPage /> },
       { path: 'retainers/:id', element: <RetainerDetailPage /> },
+      { path: 'goals', element: <GoalsPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'collections', element: <CollectionsPage /> },
       { path: 'partnership', element: <PartnershipPage /> },
