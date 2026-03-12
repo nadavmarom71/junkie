@@ -81,7 +81,7 @@ export interface CreateRetainerInput {
 // ── Transactions ──────────────────────────────────────────────────────────────
 
 export type TransactionType = 'income' | 'expense';
-export type TransactionSource = 'manual' | 'webhook' | 'seed' | 'import';
+export type TransactionSource = 'manual' | 'webhook' | 'seed' | 'import' | 'telegram_nl';
 
 export interface BusinessTransaction {
   id: string;
@@ -103,6 +103,7 @@ export interface BusinessTransaction {
   expected_date_unknown: boolean;
   payment_schedule: Array<{ amount: number; date: string | null; unknown: boolean }> | null;
   linked_transaction_id: string | null;
+  document_link: string | null;
   linked_expenses?: BusinessTransaction[];
   created_at: string;
   updated_at: string;
@@ -118,6 +119,7 @@ export interface PersonalExpense {
   category: string;
   date: string;
   notes: string | null;
+  document_link: string | null;
   source: TransactionSource;
   created_at: string;
   updated_at: string;
@@ -141,6 +143,7 @@ export interface CreateBusinessTransactionInput {
   expected_date_unknown?: boolean;
   payment_schedule?: Array<{ amount: number; date: string | null; unknown: boolean }> | null;
   linked_transaction_id?: string | null;
+  document_link?: string | null;
 }
 
 export interface CreatePersonalExpenseInput {
@@ -150,6 +153,7 @@ export interface CreatePersonalExpenseInput {
   category: string;
   date: string;
   notes?: string | null;
+  document_link?: string | null;
 }
 
 // ── AI Insights ───────────────────────────────────────────────────────────────
