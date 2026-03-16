@@ -8,11 +8,14 @@ export interface Goal {
   target: number;
   current: number;
   pct: number;
+  percentage?: number;
   projected?: number;
   type: 'monthly' | 'annual' | 'long_term';
   color: string;
   inverse?: boolean;
   subtitle?: string;
+  status?: 'on_track' | 'at_risk' | 'behind';
+  trajectory_date?: string | null;
 }
 
 export interface GoalsData {

@@ -10,6 +10,9 @@ export interface PaginatedResponse<T> {
   };
   totals?: {
     income?: number;
+    turnover?: number;
+    cashflow?: number;
+    outstanding?: number;
     expenses?: number;
     net?: number;
     total?: number;
@@ -211,6 +214,9 @@ export interface GoalProgress {
   target: number;
   current: number;
   pct: number;
+  percentage?: number;
+  trajectory_date?: string | null;
+  status?: 'on_track' | 'at_risk' | 'behind';
 }
 
 export interface TaxEstimate {
@@ -324,4 +330,40 @@ export interface ReportData {
   personal_expenses: PersonalExpense[];
   ai_insight: string | null;
   generated_at: string;
+}
+
+// ── CFO Memory & Strategy ─────────────────────────────────────────────────────
+
+export interface CFOMemory {
+  life_goals?: string;
+  main_concern?: string;
+  strategic_notes?: string;
+  last_onboarded?: string;
+  timeline_notes?: string;
+  monthly_income?: number | null;
+  monthly_expenses?: number | null;
+  balances?: {
+    bank: number;
+    emergency_fund: number;
+    pension: number;
+    investments: number;
+    debts?: number;
+  };
+}
+
+export interface CFOPriority {
+  goal: string;
+  reasoning: string;
+  urgency: 'high' | 'medium' | 'low';
+  actionable_steps: string[];
+}
+
+export interface CFOStrategy {
+  priorities: CFOPriority[];
+  income_gap: {
+    exists: boolean;
+    monthly_shortfall: number;
+    specific_recommendation: string;
+  };
+  strategic_summary: string;
 }

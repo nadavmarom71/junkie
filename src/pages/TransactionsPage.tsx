@@ -85,7 +85,7 @@ function TransactionsSummaryBanner({
   month,
   onMonthChange,
 }: {
-  totals: { income?: number; expenses?: number; net?: number; total?: number };
+  totals: { income?: number; turnover?: number; cashflow?: number; outstanding?: number; expenses?: number; net?: number; total?: number };
   tab: 'business' | 'personal';
   month: string;
   onMonthChange: (v: string) => void;
@@ -118,9 +118,11 @@ function TransactionsSummaryBanner({
     );
   }
 
-  const income   = totals.income   ?? 0;
-  const expenses = totals.expenses ?? 0;
-  const net      = totals.net      ?? (income - expenses);
+  const turnover    = totals.turnover    ?? totals.income ?? 0;
+  const cashflow    = totals.cashflow    ?? totals.income ?? 0;
+  const outstanding = totals.outstanding ?? Math.max(0, turnover - cashflow);
+  const expenses    = totals.expenses    ?? 0;
+  const net         = totals.net         ?? (cashflow - expenses);
 
   return (
     <div
@@ -131,24 +133,49 @@ function TransactionsSummaryBanner({
         <span className="text-lg font-bold">סיכום פיננסי —</span>
         {monthSelect}
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        <div className="text-center">
-          <div className="text-sm mb-1 font-medium" style={{ color: 'var(--t2)' }}>הכנסות</div>
-          <div className="text-2xl font-extrabold text-green-400">+{formatCurrency(income)}</div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Turnover */}
+        <div className="text-center space-y-1">
+          <div className="text-xs font-medium" style={{ color: 'var(--t2)' }}>מחזור</div>
+          <div className="text-xl font-extrabold text-green-400">+{formatCurrency(turnover)}</div>
+          {outstanding > 0 && (
+            <div className="text-xs font-semibold text-amber-400">
+              לגבייה: {formatCurrency(outstanding)}
+            </div>
+          )}
         </div>
-        <div className="text-center">
-          <div className="text-sm mb-1 font-medium" style={{ color: 'var(--t2)' }}>הוצאות</div>
-          <div className="text-2xl font-extrabold text-red-400">-{formatCurrency(expenses)}</div>
-        </div>
+
+        {/* Cash Flow */}
         <div
-          className="text-center rounded-xl p-2"
+          className="text-center space-y-1 rounded-xl p-2"
+          style={{ background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.18)' }}
+        >
+          <div className="text-xs font-medium" style={{ color: 'var(--t2)' }}>תזרים (שולם)</div>
+          <div className="text-xl font-extrabold text-blue-400">+{formatCurrency(cashflow)}</div>
+          {outstanding > 0 && (
+            <div className="text-xs" style={{ color: 'var(--t2)' }}>
+              {Math.round((cashflow / (turnover || 1)) * 100)}% נגבה
+            </div>
+          )}
+        </div>
+
+        {/* Expenses */}
+        <div className="text-center space-y-1">
+          <div className="text-xs font-medium" style={{ color: 'var(--t2)' }}>הוצאות</div>
+          <div className="text-xl font-extrabold text-red-400">-{formatCurrency(expenses)}</div>
+        </div>
+
+        {/* Net */}
+        <div
+          className="text-center space-y-1 rounded-xl p-2"
           style={{
             background: net >= 0 ? 'rgba(0,196,140,0.08)' : 'rgba(244,63,94,0.08)',
             border: `1px solid ${net >= 0 ? 'rgba(0,196,140,0.2)' : 'rgba(244,63,94,0.2)'}`,
           }}
         >
-          <div className="text-sm mb-1 font-bold" style={{ color: 'var(--t2)' }}>נטו</div>
-          <div className={`text-2xl font-extrabold ${net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <div className="text-xs font-bold" style={{ color: 'var(--t2)' }}>נטו</div>
+          <div className={`text-xl font-extrabold ${net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {net >= 0 ? '+' : ''}{formatCurrency(net)}
           </div>
         </div>

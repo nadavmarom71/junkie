@@ -182,10 +182,10 @@ export default function DashboardPage() {
               value=""
               rawValue={data.cashflow?.totalRevenue ?? kpis.monthlyRevenue}
               prefix="₪"
-              icon={<TrendingUp size={14} color="#00C48C" />}
+              icon={<TrendingUp size={14} color="#6aa3ff" />}
               trend="up"
               trendLabel="סה״כ הכנסות"
-              variant="success"
+              variant="purple"
               sparkPoints={[{x:0,y:14},{x:23,y:10},{x:47,y:16},{x:70,y:2}]}
             />
             <KpiCard
