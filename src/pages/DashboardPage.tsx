@@ -394,7 +394,16 @@ export default function DashboardPage() {
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 anim-3">
             <RevenueChart data={charts.monthly} />
-            <ExpensesByCategoryChart data={charts.categories} />
+            <ExpensesByCategoryChart
+              data={charts.categories}
+              month={
+                dashboardMonth === 'all'
+                  ? undefined
+                  : dashboardMonth === 'current'
+                    ? `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+                    : dashboardMonth
+              }
+            />
           </div>
 
           {/* Bottom Row */}
