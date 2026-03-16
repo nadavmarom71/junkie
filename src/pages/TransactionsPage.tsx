@@ -85,7 +85,7 @@ function TransactionsSummaryBanner({
   month,
   onMonthChange,
 }: {
-  totals: { income?: number; turnover?: number; cashflow?: number; outstanding?: number; expenses?: number; net?: number; total?: number };
+  totals: { income?: number; grossRevenue?: number; grossCollected?: number; myNetPocket?: number; outstanding?: number; expenses?: number; net?: number; total?: number; turnover?: number; cashflow?: number };
   tab: 'business' | 'personal';
   month: string;
   onMonthChange: (v: string) => void;
@@ -118,11 +118,13 @@ function TransactionsSummaryBanner({
     );
   }
 
-  const turnover    = totals.turnover    ?? totals.income ?? 0;
-  const cashflow    = totals.cashflow    ?? totals.income ?? 0;
-  const outstanding = totals.outstanding ?? Math.max(0, turnover - cashflow);
-  const expenses    = totals.expenses    ?? 0;
-  const net         = totals.net         ?? (cashflow - expenses);
+  const grossRevenue   = totals.grossRevenue  ?? totals.turnover  ?? totals.income ?? 0;
+  const grossCollected = totals.grossCollected ?? totals.cashflow  ?? totals.income ?? 0;
+  const myNetPocket    = totals.myNetPocket    ?? grossCollected;
+  const outstanding    = totals.outstanding    ?? Math.max(0, grossRevenue - grossCollected);
+  const expenses       = totals.expenses       ?? 0;
+  const net            = totals.net            ?? (myNetPocket - expenses);
+  const partnerCut     = grossCollected - myNetPocket;
 
   return (
     <div
@@ -135,10 +137,10 @@ function TransactionsSummaryBanner({
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* Turnover */}
+        {/* Gross Revenue */}
         <div className="text-center space-y-1">
-          <div className="text-xs font-medium" style={{ color: 'var(--t2)' }}>מחזור</div>
-          <div className="text-xl font-extrabold text-green-400">+{formatCurrency(turnover)}</div>
+          <div className="text-xs font-medium" style={{ color: 'var(--t2)' }}>מחזור גולמי</div>
+          <div className="text-xl font-extrabold text-green-400">+{formatCurrency(grossRevenue)}</div>
           {outstanding > 0 && (
             <div className="text-xs font-semibold text-amber-400">
               לגבייה: {formatCurrency(outstanding)}
@@ -146,27 +148,35 @@ function TransactionsSummaryBanner({
           )}
         </div>
 
-        {/* Cash Flow */}
+        {/* Gross Collected */}
         <div
           className="text-center space-y-1 rounded-xl p-2"
           style={{ background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.18)' }}
         >
-          <div className="text-xs font-medium" style={{ color: 'var(--t2)' }}>תזרים (שולם)</div>
-          <div className="text-xl font-extrabold text-blue-400">+{formatCurrency(cashflow)}</div>
+          <div className="text-xs font-medium" style={{ color: 'var(--t2)' }}>תזרים שנגבה</div>
+          <div className="text-xl font-extrabold text-blue-400">+{formatCurrency(grossCollected)}</div>
           {outstanding > 0 && (
             <div className="text-xs" style={{ color: 'var(--t2)' }}>
-              {Math.round((cashflow / (turnover || 1)) * 100)}% נגבה
+              {Math.round((grossCollected / (grossRevenue || 1)) * 100)}% נגבה
             </div>
           )}
         </div>
 
-        {/* Expenses */}
-        <div className="text-center space-y-1">
-          <div className="text-xs font-medium" style={{ color: 'var(--t2)' }}>הוצאות</div>
-          <div className="text-xl font-extrabold text-red-400">-{formatCurrency(expenses)}</div>
+        {/* My Net Pocket */}
+        <div
+          className="text-center space-y-1 rounded-xl p-2"
+          style={{ background: 'rgba(168,85,247,0.07)', border: '1px solid rgba(168,85,247,0.18)' }}
+        >
+          <div className="text-xs font-medium" style={{ color: 'var(--t2)' }}>בכיס שלי</div>
+          <div className="text-xl font-extrabold text-purple-400">+{formatCurrency(myNetPocket)}</div>
+          {partnerCut > 0 && (
+            <div className="text-xs" style={{ color: 'var(--t2)' }}>
+              שותף: -{formatCurrency(partnerCut)}
+            </div>
+          )}
         </div>
 
-        {/* Net */}
+        {/* Net profit */}
         <div
           className="text-center space-y-1 rounded-xl p-2"
           style={{
@@ -177,6 +187,9 @@ function TransactionsSummaryBanner({
           <div className="text-xs font-bold" style={{ color: 'var(--t2)' }}>נטו</div>
           <div className={`text-xl font-extrabold ${net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {net >= 0 ? '+' : ''}{formatCurrency(net)}
+          </div>
+          <div className="text-xs" style={{ color: 'var(--t2)' }}>
+            -{formatCurrency(expenses)} הוצאות
           </div>
         </div>
       </div>
@@ -999,9 +1012,19 @@ function ExpandableTransactionCard({
                 <span className={`text-base font-bold ${tx.payment_status === 'paid' ? 'text-green-400' : 'text-yellow-400'}`}>
                   +₪{Number(tx.amount).toLocaleString('he-IL')}
                 </span>
-                <span className="text-xs font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/25 px-1.5 py-0.5 rounded-full">
-                  +₪{(Number(tx.project_total) - Number(tx.amount)).toLocaleString('he-IL')} יתרה
-                </span>
+                {tx.partner_split_pct != null ? (() => {
+                  const grossRemaining = Number(tx.project_total) - Number(tx.amount);
+                  const netRemaining = Math.round(grossRemaining * (1 - Number(tx.partner_split_pct) / 100));
+                  return (
+                    <span className="text-xs font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/25 px-1.5 py-0.5 rounded-full">
+                      יתרה ₪{grossRemaining.toLocaleString('he-IL')} → ₪{netRemaining.toLocaleString('he-IL')} (שלך)
+                    </span>
+                  );
+                })() : (
+                  <span className="text-xs font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/25 px-1.5 py-0.5 rounded-full">
+                    +₪{(Number(tx.project_total) - Number(tx.amount)).toLocaleString('he-IL')} יתרה
+                  </span>
+                )}
               </div>
             ) : (
               <span className={`text-base font-bold ${isIncome ? (tx.payment_status === 'paid' ? 'text-green-400' : 'text-yellow-400') : 'text-red-400'}`}>

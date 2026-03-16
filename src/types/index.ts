@@ -10,12 +10,17 @@ export interface PaginatedResponse<T> {
   };
   totals?: {
     income?: number;
+    // New clear fields (gross = no partner split applied)
+    grossRevenue?: number;    // full committed value, gross
+    grossCollected?: number;  // actually received, gross
+    myNetPocket?: number;     // received after partner splits
+    outstanding?: number;     // grossRevenue - grossCollected
+    expenses?: number;
+    net?: number;             // myNetPocket - expenses
+    total?: number;
+    // legacy fallbacks
     turnover?: number;
     cashflow?: number;
-    outstanding?: number;
-    expenses?: number;
-    net?: number;
-    total?: number;
   };
 }
 
