@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { TrendingUp, TrendingDown, Repeat, BadgeDollarSign, DollarSign, ArrowDownLeft, Clock, Target, Receipt, Sparkles, X, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { TrendingUp, TrendingDown, Repeat, BadgeDollarSign, DollarSign, ArrowDownLeft, Clock, Target, Receipt, Sparkles, X, ArrowLeft, ChevronDown } from 'lucide-react';
 import api from '@/lib/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDashboardStats } from '@/hooks/useDashboard';
@@ -25,6 +25,81 @@ import RevenueChart from '@/components/dashboard/RevenueChart';
 import ExpensesByCategoryChart from '@/components/dashboard/ExpensesByCategoryChart';
 import AiInsightsWidget from '@/components/dashboard/AiInsightsWidget';
 import UpcomingPayments from '@/components/dashboard/UpcomingPayments';
+
+// ── Personal Category Breakdown ───────────────────────────────────────────────
+
+type CategoryItem = { id: string; description: string; date: string; amount: number };
+type CategoryRow  = { category: string; amount: number; items?: CategoryItem[] };
+
+function PersonalCategoryBreakdown({ byCategory }: { byCategory: CategoryRow[] }) {
+  const [openCat, setOpenCat] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <h3 className="text-sm font-bold">הוצאות לפי קטגוריה</h3>
+        <button
+          onClick={() => navigate('/transactions?tab=personal')}
+          className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+        >
+          ראה הכל ←
+        </button>
+      </div>
+      <div className="divide-y divide-white/[0.05]">
+        {byCategory.map(({ category, amount, items }) => {
+          const isOpen = openCat === category;
+          return (
+            <div key={category}>
+              {/* Category header row */}
+              <button
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.03] transition-colors"
+                onClick={() => setOpenCat(isOpen ? null : category)}
+              >
+                <div className="flex items-center gap-2">
+                  <ChevronDown
+                    size={14}
+                    className="transition-transform flex-shrink-0"
+                    style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', color: 'var(--t2)' }}
+                  />
+                  <span className="text-base font-medium">{category}</span>
+                </div>
+                <span className="text-xl font-extrabold text-red-400">
+                  ₪{amount.toLocaleString('he-IL')}
+                </span>
+              </button>
+
+              {/* Expanded: individual transactions */}
+              {isOpen && items && items.length > 0 && (
+                <div className="pb-2" style={{ background: 'rgba(0,0,0,0.15)' }}>
+                  {items.map(item => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between px-6 py-2"
+                      style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{item.description}</p>
+                        <p className="text-xs" style={{ color: 'var(--t2)' }}>
+                          {new Date(item.date).toLocaleDateString('he-IL', { day: 'numeric', month: 'long' })}
+                        </p>
+                      </div>
+                      <span className="text-base font-bold text-red-400 flex-shrink-0 ms-3">
+                        ₪{item.amount.toLocaleString('he-IL')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Goal Bar ───────────────────────────────────────────────────────────────────
 
 function GoalBar({ label, current, target, pct, color, inverted }: {
   label: string; current: number; target: number; pct: number; color: string; inverted?: boolean;
@@ -385,19 +460,9 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Category breakdown */}
+          {/* Category breakdown — expandable */}
           {data.personal?.byCategory && data.personal.byCategory.length > 0 && (
-            <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <h3 className="text-sm font-bold mb-3">הוצאות לפי קטגוריה</h3>
-              <div className="space-y-2">
-                {data.personal.byCategory.map(({ category, amount }) => (
-                  <div key={category} className="flex items-center justify-between">
-                    <span className="text-sm" style={{ color: 'var(--t2)' }}>{category}</span>
-                    <span className="text-sm font-bold">₪{amount.toLocaleString('he-IL')}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <PersonalCategoryBreakdown byCategory={data.personal.byCategory} />
           )}
         </div>
       )}
