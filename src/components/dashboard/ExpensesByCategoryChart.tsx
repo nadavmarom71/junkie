@@ -99,11 +99,11 @@ export default function ExpensesByCategoryChart({ data, month }: Props) {
               innerRadius={48}
               outerRadius={68}
               dataKey="amount"
-              activeIndex={activeIndex}
-              activeShape={renderActiveShape}
-              onMouseEnter={(_, index) => setActiveIndex(index)}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              {...({ activeIndex, activeShape: renderActiveShape } as any)}
+              onMouseEnter={(_: unknown, index: number) => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(undefined)}
-              onClick={(entry) => handleClick(entry as { category: string })}
+              onClick={(entry: { category: string }) => handleClick(entry)}
               style={{ cursor: 'pointer', outline: 'none' }}
               strokeWidth={0}
             >

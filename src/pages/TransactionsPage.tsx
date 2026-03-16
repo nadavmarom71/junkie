@@ -21,7 +21,7 @@ import {
   useUpdateTransaction,
 } from '@/hooks/useTransactions';
 import { useClients, useCreateClient } from '@/hooks/useClients';
-import { formatCurrency, formatDateShort } from '@/lib/formatters';
+import { formatCurrency } from '@/lib/formatters';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -1240,7 +1240,7 @@ export default function TransactionsPage() {
         description="האם אתה בטוח? פעולה זו אינה הפיכה."
         confirmLabel="מחק"
         onConfirm={confirmDelete}
-        onCancel={() => setDeleteId(null)}
+        onClose={() => setDeleteId(null)}
       />
     </div>
   );
