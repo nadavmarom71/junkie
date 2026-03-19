@@ -16,6 +16,7 @@ import SettingsPage from '@/pages/SettingsPage';
 import GoalsPage from '@/pages/GoalsPage';
 import CollectionsPage from '@/pages/CollectionsPage';
 import PartnershipPage from '@/pages/PartnershipPage';
+import ReceiptsInboxPage from '@/pages/ReceiptsInboxPage';
 
 const router = createBrowserRouter([
   {
@@ -34,6 +35,7 @@ const router = createBrowserRouter([
       { path: 'goals', element: <GoalsPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'collections', element: <CollectionsPage /> },
+      { path: 'receipts', element: <ReceiptsInboxPage /> },
       { path: 'partnership', element: <PartnershipPage /> },
     ],
   },

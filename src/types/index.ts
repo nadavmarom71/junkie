@@ -337,6 +337,40 @@ export interface ReportData {
   generated_at: string;
 }
 
+// ── Pending Receipts ─────────────────────────────────────────────────────────
+
+export type ReceiptStatus = 'pending' | 'processed' | 'ignored';
+
+export interface PendingReceipt {
+  id: string;
+  drive_file_url: string;
+  file_name: string;
+  date_received: string;
+  extracted_amount: number | null;
+  extracted_vendor: string | null;
+  status: ReceiptStatus;
+  approved_transaction_id: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReceiptsSummary {
+  pending: number;
+  processed: number;
+  ignored: number;
+}
+
+export interface ApproveReceiptInput {
+  amount: number;
+  description: string;
+  category: string;
+  date: string;
+  type?: 'expense' | 'income';
+  client_id?: string | null;
+  notes?: string | null;
+}
+
 // ── CFO Memory & Strategy ─────────────────────────────────────────────────────
 
 export interface CFOMemory {
