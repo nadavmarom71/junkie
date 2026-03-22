@@ -437,17 +437,27 @@ export default function SettingsPage() {
                 <p className="font-medium text-sm">ייצוא עסקאות (CSV)</p>
                 <p className="text-xs text-white/50">כל העסקאות העסקיות בפורמט Excel/CSV</p>
               </div>
-              <a
-                href={csvExportUrl}
-                download="transactions.csv"
-                target="_blank"
-                rel="noreferrer"
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(csvExportUrl, { credentials: 'include' });
+                    if (!res.ok) throw new Error('Export failed');
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'transactions.csv';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  } catch { /* ignore */ }
+                }}
               >
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  הורד CSV
-                </Button>
-              </a>
+                <Download className="h-4 w-4" />
+                הורד CSV
+              </Button>
             </div>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-md p-3">

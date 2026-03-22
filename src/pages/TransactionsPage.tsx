@@ -1027,13 +1027,28 @@ export default function TransactionsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">עסקאות</h1>
         <div className="flex gap-2">
-          <a
-            href={`/api/v1/transactions/export.csv?tab=${tab}&x-api-key=${import.meta.env.VITE_API_KEY || ''}`}
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch(
+                  `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/transactions/export.csv?tab=${tab}`,
+                  { credentials: 'include' }
+                );
+                if (!res.ok) throw new Error('Export failed');
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `transactions-${tab}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              } catch { /* ignore */ }
+            }}
             className="inline-flex items-center gap-1.5 text-sm border border-white/20 rounded-lg px-3 py-1.5 hover:bg-white/5 transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">ייצוא CSV</span>
-          </a>
+          </button>
           <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5">
             <Plus className="h-4 w-4" />
             הוסף

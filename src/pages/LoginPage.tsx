@@ -8,10 +8,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const ok = login(password);
+    const ok = await login(password);
     if (!ok) {
       toast.error('סיסמה שגויה');
       setPassword('');

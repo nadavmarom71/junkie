@@ -1,38 +1,59 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import axios from 'axios';
 
-const AUTH_KEY = 'junkie_auth';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+
+// Separate axios instance for auth calls (bypasses the main interceptor)
+const authApi = axios.create({
+  baseURL: API_BASE.replace(/\/api\/v1\/?$/, ''),
+  withCredentials: true,
+  headers: { 'Content-Type': 'application/json' },
+});
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: (password: string) => boolean;
-  logout: () => void;
+  loading: boolean;
+  login: (password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    () => sessionStorage.getItem(AUTH_KEY) === 'ok'
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const login = (password: string): boolean => {
-    const correct = (import.meta.env.VITE_AUTH_PASSWORD ?? '').trim();
-    if (password.trim() === correct) {
-      sessionStorage.setItem(AUTH_KEY, 'ok');
+  // Check existing session cookie on mount
+  useEffect(() => {
+    authApi
+      .get('/api/v1/auth/status')
+      .then((res) => setIsAuthenticated(res.data?.authenticated === true))
+      .catch(() => setIsAuthenticated(false))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const login = async (password: string): Promise<boolean> => {
+    try {
+      await authApi.post('/api/v1/auth/login', { password });
       setIsAuthenticated(true);
       return true;
+    } catch {
+      return false;
     }
-    return false;
   };
 
-  const logout = () => {
-    sessionStorage.removeItem(AUTH_KEY);
+  const logout = async () => {
+    try {
+      await authApi.post('/api/v1/auth/logout');
+    } catch {
+      // ignore
+    }
     setIsAuthenticated(false);
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

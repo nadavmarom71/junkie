@@ -3,8 +3,8 @@ import { useReceipts, useApproveReceipt, useIgnoreReceipt, useReopenReceipt } fr
 import { formatCurrency } from '@/lib/formatters';
 import type { PendingReceipt, ReceiptStatus, ApproveReceiptInput } from '@/types';
 import {
-  Inbox, FileText, Check, X, ExternalLink, RotateCcw,
-  ChevronDown, Loader2, ScanSearch, Receipt,
+  Inbox, Check, X, ExternalLink, RotateCcw,
+  Loader2, ScanSearch,
 } from 'lucide-react';
 import { toast } from 'sonner';
 

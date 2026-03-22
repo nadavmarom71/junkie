@@ -42,7 +42,15 @@ const router = createBrowserRouter([
 ]);
 
 export default function App() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#080B14' }}>
+        <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', fontFamily: 'Arial, sans-serif' }}>Loading...</div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (

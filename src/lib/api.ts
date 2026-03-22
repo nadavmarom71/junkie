@@ -4,8 +4,8 @@ const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   headers: {
     'Content-Type': 'application/json',
-    'x-api-key': import.meta.env.VITE_API_KEY || '',
   },
+  withCredentials: true, // send httpOnly session cookie on every request
   timeout: 20000,
 });
 
