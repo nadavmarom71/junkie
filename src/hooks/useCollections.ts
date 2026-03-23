@@ -16,3 +16,15 @@ export function useRemindCollection() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['collections'] }),
   });
 }
+
+export function useMarkCollectionPaid() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post(`/collections/paid/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['collections'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
+}

@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, Banknote, Plus, TrendingUp,
   TrendingDown, ShoppingCart, MoreHorizontal, Lightbulb, Users,
-  Repeat, FileText, Settings, Users2, X, TrendingUp as ForecastIcon, Target,
+  Repeat, FileText, Settings, Users2, X, TrendingUp as ForecastIcon, Target, Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +24,7 @@ const MORE_ITEMS = [
   { to: '/goals',       icon: Target,       label: 'יעדים',        accent: '#22c55e' },
   { to: '/settings',    icon: Settings,     label: 'הגדרות',       accent: undefined },
   { to: '/partnership', icon: Users2,       label: 'השותפות שלך',  accent: '#7c3aed' },
+  { to: '/onboarding',  icon: Sparkles,     label: 'AI Wizard',    accent: '#a78bfa' },
 ];
 
 const MORE_PATHS = MORE_ITEMS.map(i => i.to);

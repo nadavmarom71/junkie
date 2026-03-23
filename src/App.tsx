@@ -17,6 +17,7 @@ import GoalsPage from '@/pages/GoalsPage';
 import CollectionsPage from '@/pages/CollectionsPage';
 import PartnershipPage from '@/pages/PartnershipPage';
 import ReceiptsInboxPage from '@/pages/ReceiptsInboxPage';
+import Onboarding from '@/pages/Onboarding';
 
 const router = createBrowserRouter([
   {
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
       { path: 'partnership', element: <PartnershipPage /> },
     ],
   },
+  { path: '/onboarding', element: <Onboarding /> },
 ]);
 
 export default function App() {

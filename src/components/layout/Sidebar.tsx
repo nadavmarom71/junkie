@@ -1,7 +1,7 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, Lightbulb, Users,
-  TrendingUp, FileText, Repeat, Settings, X, Banknote, Users2, Target, Inbox,
+  TrendingUp, FileText, Repeat, Settings, X, Banknote, Users2, Target, Inbox, Sparkles,
 } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,7 @@ const sidebarStyle = {
 };
 
 function SidebarContent({ onClose, closeOnNav }: { onClose: () => void; closeOnNav: boolean }) {
+  const navigate = useNavigate();
   return (
     <>
       {/* Logo */}
@@ -97,6 +98,22 @@ function SidebarContent({ onClose, closeOnNav }: { onClose: () => void; closeOnN
           </NavLink>
         ))}
       </nav>
+
+      {/* Onboarding Test Button */}
+      <div className="px-3 mb-2">
+        <button
+          onClick={() => navigate('/onboarding')}
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
+          style={{
+            background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(37,99,235,0.15))',
+            border: '1px solid rgba(139,92,246,0.3)',
+            color: '#c4b5fd',
+          }}
+        >
+          <Sparkles className="h-4 w-4 flex-shrink-0" style={{ color: '#a78bfa' }} />
+          <span className="flex-1 text-start">AI Wizard Onboarding</span>
+        </button>
+      </div>
 
       {/* Footer */}
       <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
