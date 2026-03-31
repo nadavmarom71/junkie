@@ -65,9 +65,39 @@ const fmt = (n: number) =>
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
+/**
+ * Parses a free-text message to extract a financial amount and which of the
+ * 3 cards it belongs to. Used by the hybrid inline chat during financial_cards mode.
+ * Returns a partial update to FinancialState (only the fields detected).
+ */
+function parseInlineFinancialText(text: string): Partial<Pick<FinancialState, 'liquid' | 'locked' | 'receivables'>> {
+  // Extract first number — handles commas and optional K/k suffix
+  const numMatch = text.match(/(\d[\d,]*)\s*([KkK])?/);
+  if (!numMatch) return {};
+
+  const amount = parseInt(numMatch[1].replace(/,/g, ''), 10) * (numMatch[2] ? 1000 : 1);
+  if (!amount || isNaN(amount)) return {};
+
+  // Detect category by Hebrew + English keywords
+  if (text.includes('חייב') || text.includes('מגיע') || text.includes('גביה') || text.includes('חוב') ||
+      /owed|owes|debt|receivable/i.test(text)) {
+    return { receivables: amount };
+  }
+  if (text.includes('בנק') || text.includes('נזיל') || text.includes('חשבון') ||
+      /cash|bank|checking/i.test(text)) {
+    return { liquid: amount };
+  }
+  if (text.includes('השקע') || text.includes('פנסי') || text.includes('קרן') ||
+      text.includes('מניה') || text.includes('קריפטו') ||
+      /invest|stock|pension|crypto|portfolio/i.test(text)) {
+    return { locked: amount };
+  }
+  return {};
+}
+
 // ─── AI Engine (Simulated — ready for backend replacement) ───────────────────
 
-type AIEvent = 'financial_complete' | 'text_reply' | 'joy_chosen' | 'model_selected';
+type AIEvent = 'financial_complete' | 'text_reply' | 'joy_chosen' | 'model_selected' | 'inline_financial_text';
 
 interface AIResponse {
   text: string;
@@ -136,6 +166,28 @@ function simulateAI(
       return {
         text: 'מעניין. נשמור את זה. יש עוד הקשר שחשוב שאדע?',
         nextMode: 'context_notes',
+      };
+    }
+
+    case 'inline_financial_text': {
+      const { liquid, locked, receivables } = financial;
+      const filledLabels = [
+        liquid !== null && 'עו״ש',
+        locked !== null && 'השקעות',
+        receivables !== null && 'חייבים לי',
+      ].filter(Boolean).join(', ');
+
+      const ack = filledLabels ? `הבנתי — ${filledLabels} נרשם. ` : 'שמרתי את ההקשר. ';
+
+      const remaining = [
+        liquid === null && 'עו״ש',
+        locked === null && 'השקעות',
+        receivables === null && 'כמה חייבים לך',
+      ].filter(Boolean) as string[];
+
+      return {
+        text: `${ack}נשאר: ${remaining.join(', ')}. אפשר בלחיצה על הכפתור או להמשיך בטקסט.`,
+        nextMode: 'financial_cards',
       };
     }
 
@@ -701,6 +753,38 @@ export default function Onboarding() {
     await fireAI('text_reply', financial);
   }, [textInput, financial, addUserMessage, fireAI]);
 
+  // ── Inline financial text (free-text input alongside cards) ────────────────
+  const [inlineFinancialText, setInlineFinancialText] = useState('');
+
+  const handleInlineFinancialText = useCallback(async () => {
+    const text = inlineFinancialText.trim();
+    if (!text) return;
+    setInlineFinancialText('');
+    addUserMessage(text);
+
+    // Parse for amounts + category, then merge into state
+    const parsed = parseInlineFinancialText(text);
+    const next: FinancialState = {
+      ...financial,
+      ...(parsed.liquid !== undefined ? { liquid: parsed.liquid } : {}),
+      ...(parsed.locked !== undefined ? { locked: parsed.locked } : {}),
+      ...(parsed.receivables !== undefined ? { receivables: parsed.receivables } : {}),
+      // Always append the raw text to contextNotes so qualifiers ("חוב מפוקפק", etc.) are preserved
+      contextNotes: financial.contextNotes ? `${financial.contextNotes}; ${text}` : text,
+    };
+    setFinancial(next);
+
+    if (next.liquid !== null && next.locked !== null && next.receivables !== null) {
+      setInputMode('none');
+      setShowProcessing(true);
+      await new Promise((r) => setTimeout(r, 2600));
+      setShowProcessing(false);
+      await fireAI('financial_complete', next);
+    } else {
+      await fireAI('inline_financial_text', next);
+    }
+  }, [inlineFinancialText, financial, addUserMessage, fireAI]);
+
   // ── Handle context notes (optional freeform background) ─────────────────────
   const [contextInput, setContextInput] = useState('');
   const handleContextSubmit = useCallback(async (skip = false) => {
@@ -981,6 +1065,39 @@ export default function Onboarding() {
                   )}
                 </motion.button>
               ))}
+
+              {/* Hybrid inline chat — always visible alongside cards */}
+              <div className="pt-3 mt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div
+                  className="flex items-center gap-2 rounded-2xl px-4 py-2"
+                  style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  <input
+                    value={inlineFinancialText}
+                    onChange={(e) => setInlineFinancialText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleInlineFinancialText()}
+                    placeholder='או כתוב בחופשיות — "חייבים לי 10K אבל זה חוב מפוקפק"'
+                    dir="rtl"
+                    className="flex-1 bg-transparent text-xs outline-none py-2"
+                    style={{ color: 'rgba(255,255,255,0.8)' }}
+                  />
+                  <button
+                    onClick={handleInlineFinancialText}
+                    disabled={!inlineFinancialText.trim()}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all active:scale-90"
+                    style={{
+                      background: inlineFinancialText.trim()
+                        ? 'linear-gradient(135deg, #2563EB, #056dff)'
+                        : 'rgba(255,255,255,0.06)',
+                    }}
+                  >
+                    <Send size={12} className="text-white" style={{ transform: 'scaleX(-1)' }} />
+                  </button>
+                </div>
+              </div>
             </motion.div>
           )}
 
