@@ -66,33 +66,44 @@ const fmt = (n: number) =>
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 /**
- * Parses a free-text message to extract a financial amount and which of the
- * 3 cards it belongs to. Used by the hybrid inline chat during financial_cards mode.
- * Returns a partial update to FinancialState (only the fields detected).
+ * Parses a free-text message to extract financial amounts for each card.
+ * Splits on newlines and " - " separators so a single long message like
+ * "עובר ושב: 8,000 - השקעות: 620 - אחי חייב לי 11,000" fills all 3 cards correctly.
+ * Each segment's number is matched only to keywords in THAT segment.
  */
 function parseInlineFinancialText(text: string): Partial<Pick<FinancialState, 'liquid' | 'locked' | 'receivables'>> {
-  // Extract first number — handles commas and optional K/k suffix
-  const numMatch = text.match(/(\d[\d,]*)\s*([KkK])?/);
-  if (!numMatch) return {};
+  const result: Partial<Pick<FinancialState, 'liquid' | 'locked' | 'receivables'>> = {};
 
-  const amount = parseInt(numMatch[1].replace(/,/g, ''), 10) * (numMatch[2] ? 1000 : 1);
-  if (!amount || isNaN(amount)) return {};
+  const extractNum = (s: string): number | null => {
+    const m = s.match(/(\d[\d,]*)\s*([KkK])?/);
+    if (!m) return null;
+    const n = parseInt(m[1].replace(/,/g, ''), 10) * (m[2] ? 1000 : 1);
+    return n > 0 ? n : null;
+  };
 
-  // Detect category by Hebrew + English keywords
-  if (text.includes('חייב') || text.includes('מגיע') || text.includes('גביה') || text.includes('חוב') ||
-      /owed|owes|debt|receivable/i.test(text)) {
-    return { receivables: amount };
+  // Split on newlines and common Hebrew list separators (" - ", ". ")
+  const segments = text.split(/\n|\r| - |\. /);
+
+  for (const seg of segments) {
+    const n = extractNum(seg);
+    if (!n) continue;
+
+    const isReceivable = seg.includes('חייב') || seg.includes('מגיע') || seg.includes('גביה') || seg.includes('חוב') ||
+      /owed|owes|debt|receivable/i.test(seg);
+    const isLocked = seg.includes('השקע') || seg.includes('פנסי') || seg.includes('קרן') ||
+      seg.includes('מניה') || seg.includes('קריפטו') || seg.includes('נעול') ||
+      /invest|stock|pension|crypto|portfolio/i.test(seg);
+    const isLiquid = seg.includes('עובר') || seg.includes('עו"ש') || seg.includes('עו״ש') ||
+      seg.includes('בנק') || seg.includes('נזיל') || seg.includes('חשבון') ||
+      /cash|bank|checking/i.test(seg);
+
+    if (isReceivable && !result.receivables) result.receivables = n;
+    else if (isLocked && !result.locked) result.locked = n;
+    else if (isLiquid && !result.liquid) result.liquid = n;
   }
-  if (text.includes('בנק') || text.includes('נזיל') || text.includes('חשבון') ||
-      /cash|bank|checking/i.test(text)) {
-    return { liquid: amount };
-  }
-  if (text.includes('השקע') || text.includes('פנסי') || text.includes('קרן') ||
-      text.includes('מניה') || text.includes('קריפטו') ||
-      /invest|stock|pension|crypto|portfolio/i.test(text)) {
-    return { locked: amount };
-  }
-  return {};
+
+  // Fallback: if only one number in entire text and no category detected, skip (don't guess)
+  return result;
 }
 
 // ─── AI Engine (Simulated — ready for backend replacement) ───────────────────
