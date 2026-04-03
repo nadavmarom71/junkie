@@ -88,7 +88,7 @@ export interface CreateRetainerInput {
 
 // ── Transactions ──────────────────────────────────────────────────────────────
 
-export type TransactionType = 'income' | 'expense';
+export type TransactionType = 'income' | 'expense' | 'collection';
 export type TransactionSource = 'manual' | 'webhook' | 'seed' | 'import' | 'telegram_nl';
 
 export interface BusinessTransaction {

@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, Banknote, Plus, TrendingUp,
   TrendingDown, ShoppingCart, MoreHorizontal, Lightbulb, Users,
-  Repeat, FileText, Settings, Users2, X, TrendingUp as ForecastIcon, Target, Sparkles,
+  Repeat, FileText, Settings, Users2, X, TrendingUp as ForecastIcon, Target, Sparkles, Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,7 @@ const QUICK_ACTIONS = [
 /* ─── "More" sheet items ─── */
 const MORE_ITEMS = [
   { to: '/insights',    icon: Lightbulb,    label: 'תובנות AI',    accent: undefined },
+  { to: '/accounts',    icon: Building2,    label: 'חשבונות',      accent: '#3b82f6' },
   { to: '/clients',     icon: Users,        label: 'לקוחות',       accent: undefined },
   { to: '/retainers',   icon: Repeat,       label: 'ריטיינרים',    accent: undefined },
   { to: '/forecast',    icon: ForecastIcon, label: 'תחזית',        accent: undefined },

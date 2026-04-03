@@ -12,7 +12,7 @@ export const TRANSACTIONS_KEY = 'transactions';
 
 export interface TransactionFilters {
   tab?: 'business' | 'personal';
-  type?: 'income' | 'expense' | 'all';
+  type?: 'income' | 'expense' | 'collection' | 'all';
   category?: string;
   search?: string;
   from?: string;

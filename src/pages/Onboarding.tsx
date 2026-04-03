@@ -21,7 +21,8 @@ type InputMode =
   | 'model_slider'      // 3 budget model selection cards
   | 'text'              // free-form chat input (anomaly intervention)
   | 'none'              // AI is thinking / transitioning
-  | 'summary';          // interview complete — show goals card + CTA
+  | 'summary'           // interview complete — show goals card + CTA
+  | 'pdf_upload';       // optional multi-PDF import step (bank/credit card statements)
 
 interface ConvoMessage {
   id: string;
@@ -65,46 +66,7 @@ const fmt = (n: number) =>
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-/**
- * Parses a free-text message to extract financial amounts for each card.
- * Splits on newlines and " - " separators so a single long message like
- * "עובר ושב: 8,000 - השקעות: 620 - אחי חייב לי 11,000" fills all 3 cards correctly.
- * Each segment's number is matched only to keywords in THAT segment.
- */
-function parseInlineFinancialText(text: string): Partial<Pick<FinancialState, 'liquid' | 'locked' | 'receivables'>> {
-  const result: Partial<Pick<FinancialState, 'liquid' | 'locked' | 'receivables'>> = {};
-
-  const extractNum = (s: string): number | null => {
-    const m = s.match(/(\d[\d,]*)\s*([KkK])?/);
-    if (!m) return null;
-    const n = parseInt(m[1].replace(/,/g, ''), 10) * (m[2] ? 1000 : 1);
-    return n > 0 ? n : null;
-  };
-
-  // Split on newlines and common Hebrew list separators (" - ", ". ")
-  const segments = text.split(/\n|\r| - |\. /);
-
-  for (const seg of segments) {
-    const n = extractNum(seg);
-    if (!n) continue;
-
-    const isReceivable = seg.includes('חייב') || seg.includes('מגיע') || seg.includes('גביה') || seg.includes('חוב') ||
-      /owed|owes|debt|receivable/i.test(seg);
-    const isLocked = seg.includes('השקע') || seg.includes('פנסי') || seg.includes('קרן') ||
-      seg.includes('מניה') || seg.includes('קריפטו') || seg.includes('נעול') ||
-      /invest|stock|pension|crypto|portfolio/i.test(seg);
-    const isLiquid = seg.includes('עובר') || seg.includes('עו"ש') || seg.includes('עו״ש') ||
-      seg.includes('בנק') || seg.includes('נזיל') || seg.includes('חשבון') ||
-      /cash|bank|checking/i.test(seg);
-
-    if (isReceivable && !result.receivables) result.receivables = n;
-    else if (isLocked && !result.locked) result.locked = n;
-    else if (isLiquid && !result.liquid) result.liquid = n;
-  }
-
-  // Fallback: if only one number in entire text and no category detected, skip (don't guess)
-  return result;
-}
+// Financial text parsing is handled by the LLM via POST /api/v1/onboarding/parse-financial
 
 // ─── AI Engine (Simulated — ready for backend replacement) ───────────────────
 
@@ -181,25 +143,8 @@ function simulateAI(
     }
 
     case 'inline_financial_text': {
-      const { liquid, locked, receivables } = financial;
-      const filledLabels = [
-        liquid !== null && 'עו״ש',
-        locked !== null && 'השקעות',
-        receivables !== null && 'חייבים לי',
-      ].filter(Boolean).join(', ');
-
-      const ack = filledLabels ? `הבנתי — ${filledLabels} נרשם. ` : 'שמרתי את ההקשר. ';
-
-      const remaining = [
-        liquid === null && 'עו״ש',
-        locked === null && 'השקעות',
-        receivables === null && 'כמה חייבים לך',
-      ].filter(Boolean) as string[];
-
-      return {
-        text: `${ack}נשאר: ${remaining.join(', ')}. אפשר בלחיצה על הכפתור או להמשיך בטקסט.`,
-        nextMode: 'financial_cards',
-      };
+      // This path is no longer reached — inline text goes through the LLM API directly.
+      return { text: 'שמרתי. המשך להזין.', nextMode: 'financial_cards' };
     }
 
     case 'joy_chosen': {
@@ -628,6 +573,12 @@ export default function Onboarding() {
   const [showProcessing, setShowProcessing] = useState(false);
   const [goalsSummary, setGoalsSummary] = useState<GoalsSummary | null>(null);
 
+  // PDF upload step state
+  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
+  const [pdfType, setPdfType] = useState<'personal' | 'business'>('personal');
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfResult, setPdfResult] = useState<{ inserted: number; message: string } | null>(null);
+
   /**
    * Rolling 5-message memory buffer.
    * Stored in a ref (no re-render needed on change).
@@ -764,7 +715,7 @@ export default function Onboarding() {
     await fireAI('text_reply', financial);
   }, [textInput, financial, addUserMessage, fireAI]);
 
-  // ── Inline financial text (free-text input alongside cards) ────────────────
+  // ── Inline financial text — LLM-powered parser ──────────────────────────────
   const [inlineFinancialText, setInlineFinancialText] = useState('');
 
   const handleInlineFinancialText = useCallback(async () => {
@@ -772,29 +723,55 @@ export default function Onboarding() {
     if (!text) return;
     setInlineFinancialText('');
     addUserMessage(text);
+    setTyping(true);
 
-    // Parse for amounts + category, then merge into state
-    const parsed = parseInlineFinancialText(text);
-    const next: FinancialState = {
-      ...financial,
-      ...(parsed.liquid !== undefined ? { liquid: parsed.liquid } : {}),
-      ...(parsed.locked !== undefined ? { locked: parsed.locked } : {}),
-      ...(parsed.receivables !== undefined ? { receivables: parsed.receivables } : {}),
-      // Always append the raw text to contextNotes so qualifiers ("חוב מפוקפק", etc.) are preserved
-      contextNotes: financial.contextNotes ? `${financial.contextNotes}; ${text}` : text,
-    };
-    setFinancial(next);
+    try {
+      // Call LLM to extract financial data, convert currencies, and get Hebrew reply
+      const result = await api.post('/onboarding/parse-financial', {
+        text,
+        currentState: {
+          liquid: financial.liquid,
+          locked: financial.locked,
+          receivables: financial.receivables,
+        },
+      });
 
-    if (next.liquid !== null && next.locked !== null && next.receivables !== null) {
-      setInputMode('none');
-      setShowProcessing(true);
-      await new Promise((r) => setTimeout(r, 2600));
-      setShowProcessing(false);
-      await fireAI('financial_complete', next);
-    } else {
-      await fireAI('inline_financial_text', next);
+      // Merge LLM-extracted values with existing state
+      const next: FinancialState = {
+        ...financial,
+        ...(result.liquid != null ? { liquid: result.liquid } : {}),
+        ...(result.locked != null ? { locked: result.locked } : {}),
+        ...(result.receivables != null ? { receivables: result.receivables } : {}),
+        contextNotes: [
+          financial.contextNotes,
+          result.insights,
+          result.bad_debts != null ? `חובות מפוקפקים: ₪${result.bad_debts.toLocaleString('he-IL')}` : null,
+        ].filter(Boolean).join('; ') || null,
+      };
+      setFinancial(next);
+      setTyping(false);
+
+      const allFilled = next.liquid !== null && next.locked !== null && next.receivables !== null;
+
+      if (allFilled) {
+        if (result.ai_reply) await addAiMessage(result.ai_reply, 0);
+        setInputMode('none');
+        setShowProcessing(true);
+        await new Promise((r) => setTimeout(r, 2600));
+        setShowProcessing(false);
+        await fireAI('financial_complete', next);
+      } else {
+        const reply = result.ai_reply || 'שמרתי. המשך להזין.';
+        await addAiMessage(reply, 0);
+        setInputMode('financial_cards');
+      }
+    } catch (err) {
+      setTyping(false);
+      console.error('[Onboarding] parse-financial error:', err);
+      await addAiMessage('לא הצלחתי לנתח. נסה שוב.', 0);
+      setInputMode('financial_cards');
     }
-  }, [inlineFinancialText, financial, addUserMessage, fireAI]);
+  }, [inlineFinancialText, financial, addUserMessage, addAiMessage, fireAI]);
 
   // ── Handle context notes (optional freeform background) ─────────────────────
   const [contextInput, setContextInput] = useState('');
@@ -838,6 +815,27 @@ export default function Onboarding() {
     },
     [financial, addUserMessage, fireAI]
   );
+
+  // ── Handle PDF upload ───────────────────────────────────────────────────────
+  const handlePdfUpload = useCallback(async () => {
+    if (pdfFiles.length === 0) return;
+    setPdfUploading(true);
+    const formData = new FormData();
+    pdfFiles.forEach(f => formData.append('files', f));
+    formData.append('type', pdfType);
+    try {
+      // Pass FormData — axios auto-sets multipart/form-data; override JSON header
+      const result = await api.post('/onboarding/upload-pdfs', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setPdfResult(result);
+    } catch (err) {
+      console.error('[Onboarding] PDF upload error:', err);
+      setPdfResult({ inserted: 0, message: 'שגיאה בעלייה. נסה שוב.' });
+    } finally {
+      setPdfUploading(false);
+    }
+  }, [pdfFiles, pdfType]);
 
   const filledCount = [financial.liquid, financial.locked, financial.receivables].filter(
     (v) => v !== null
@@ -1384,10 +1382,23 @@ export default function Onboarding() {
               initial="initial"
               animate="animate"
               exit="exit"
-              className="px-4 pb-8 pt-4 space-y-4"
+              className="px-4 pb-8 pt-4 space-y-3"
               style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
             >
               <GoalsSummaryCard summary={goalsSummary} />
+
+              {/* PDF import teaser */}
+              <button
+                onClick={() => setInputMode('pdf_upload')}
+                className="w-full py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'rgba(255,255,255,0.7)',
+                }}
+              >
+                📄 ייבוא PDF של בנק / כרטיס אשראי (אופציונלי)
+              </button>
 
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -1403,6 +1414,123 @@ export default function Onboarding() {
                 <Sparkles size={18} />
                 יאללה, נתחיל לעבוד
               </motion.button>
+            </motion.div>
+          )}
+
+          {/* PDF UPLOAD STEP */}
+          {inputMode === 'pdf_upload' && (
+            <motion.div
+              key="pdf-upload"
+              variants={bottomSheetVariant}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="px-4 pb-8 pt-4 space-y-4"
+              style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div>
+                <p className="text-sm font-bold text-white/90 mb-0.5">ייבוא עסקאות מ-PDF</p>
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  העלה דפי חשבון של בנק או כרטיס אשראי — ה-AI יחלץ ויייבא את העסקאות אוטומטית
+                </p>
+              </div>
+
+              {/* Personal / Business toggle */}
+              <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                {(['personal', 'business'] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setPdfType(t)}
+                    className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all"
+                    style={{
+                      background: pdfType === t ? (t === 'personal' ? 'rgba(139,92,246,0.3)' : 'rgba(37,99,235,0.3)') : 'transparent',
+                      color: pdfType === t ? '#fff' : 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    {t === 'personal' ? '👤 הוצאות אישיות' : '💼 הוצאות עסקיות'}
+                  </button>
+                ))}
+              </div>
+
+              {/* File input area */}
+              <label
+                className="flex flex-col items-center gap-3 py-6 rounded-2xl cursor-pointer transition-all active:scale-[0.99]"
+                style={{
+                  background: pdfFiles.length > 0 ? 'rgba(37,99,235,0.08)' : 'rgba(255,255,255,0.03)',
+                  border: `2px dashed ${pdfFiles.length > 0 ? 'rgba(37,99,235,0.4)' : 'rgba(255,255,255,0.12)'}`,
+                  borderRadius: 16,
+                }}
+              >
+                <input
+                  type="file"
+                  multiple
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={e => {
+                    const files = Array.from(e.target.files || []);
+                    setPdfFiles(files);
+                    setPdfResult(null);
+                  }}
+                />
+                <span className="text-3xl">📂</span>
+                <div className="text-center">
+                  {pdfFiles.length > 0 ? (
+                    <>
+                      <p className="text-sm font-bold text-white/90">{pdfFiles.length} קבצים נבחרו</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                        {pdfFiles.map(f => f.name).join(', ')}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold text-white/70">לחץ לבחור קבצי PDF</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>ניתן לבחור מספר קבצים בו-זמנית</p>
+                    </>
+                  )}
+                </div>
+              </label>
+
+              {/* Result */}
+              {pdfResult && (
+                <div
+                  className="px-4 py-3 rounded-xl text-sm"
+                  style={{
+                    background: pdfResult.inserted > 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                    border: `1px solid ${pdfResult.inserted > 0 ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                    color: pdfResult.inserted > 0 ? '#4ade80' : '#f87171',
+                  }}
+                >
+                  {pdfResult.message}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handlePdfUpload}
+                  disabled={pdfFiles.length === 0 || pdfUploading}
+                  className="flex-1 py-3 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                  style={{
+                    background: pdfFiles.length > 0 && !pdfUploading
+                      ? 'linear-gradient(135deg, #2563EB, #056dff)'
+                      : 'rgba(37,99,235,0.2)',
+                    color: '#fff',
+                    opacity: pdfFiles.length === 0 || pdfUploading ? 0.6 : 1,
+                  }}
+                >
+                  {pdfUploading ? '⏳ מעלה ומנתח...' : '🚀 ייבא עסקאות'}
+                </button>
+                <button
+                  onClick={() => { window.location.href = '/'; }}
+                  className="px-5 py-3 rounded-2xl text-sm font-semibold transition-all active:scale-[0.98]"
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.6)',
+                  }}
+                >
+                  דלג
+                </button>
+              </div>
             </motion.div>
           )}
 

@@ -755,12 +755,13 @@ function TransactionRow({
   const isBusiness = tab === 'business';
   const bTx = tx as BusinessTransaction;
   const isIncome = isBusiness && bTx.type === 'income';
+  const isCollection = isBusiness && bTx.type === 'collection';
   const isPending = isBusiness && bTx.payment_status === 'pending';
   const isOverdue = isBusiness && bTx.payment_status === 'overdue';
 
   const amount = Number(tx.amount);
-  const amountColor = isIncome ? (isPending ? '#EAB308' : '#22c55e') : '#F43F5E';
-  const amountPrefix = isIncome ? '+' : '-';
+  const amountColor = isIncome ? (isPending ? '#EAB308' : '#22c55e') : isCollection ? '#F97316' : '#F43F5E';
+  const amountPrefix = isIncome || isCollection ? '+' : '-';
 
   const hasBalance = isIncome && bTx.project_total != null && Number(bTx.project_total) > amount;
   const balanceAmount = hasBalance ? Number(bTx.project_total) - amount : 0;
@@ -786,8 +787,8 @@ function TransactionRow({
           <div
             className="flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 text-lg select-none"
             style={{
-              background: isIncome ? 'rgba(34,197,94,0.1)' : 'rgba(244,63,94,0.08)',
-              border: `1px solid ${isIncome ? 'rgba(34,197,94,0.2)' : 'rgba(244,63,94,0.15)'}`,
+              background: isIncome ? 'rgba(34,197,94,0.1)' : isCollection ? 'rgba(249,115,22,0.1)' : 'rgba(244,63,94,0.08)',
+              border: `1px solid ${isIncome ? 'rgba(34,197,94,0.2)' : isCollection ? 'rgba(249,115,22,0.25)' : 'rgba(244,63,94,0.15)'}`,
             }}
           >
             {categoryEmoji(tx.category)}
@@ -806,6 +807,7 @@ function TransactionRow({
             </span>
             {isPending && <span className="text-[10px] font-semibold text-amber-400/80 mt-0.5">ממתין</span>}
             {isOverdue && <span className="text-[10px] font-semibold text-red-400/80 mt-0.5">באיחור</span>}
+            {isCollection && <span className="text-[10px] font-semibold mt-0.5" style={{ color: '#F97316' }}>גביה</span>}
             {hasBalance && <span className="text-[10px] font-semibold text-amber-400/70 mt-0.5">יתרה ₪{balanceAmount.toLocaleString('he-IL')}</span>}
           </div>
 
@@ -966,12 +968,12 @@ export default function TransactionsPage() {
   const tabParam    = searchParams.get('tab') as 'business' | 'personal' | null;
   const addParam    = searchParams.get('add');
   const catParam    = searchParams.get('category') || '';
-  const typeParam   = (searchParams.get('type') || 'all') as 'income' | 'expense' | 'all';
+  const typeParam   = (searchParams.get('type') || 'all') as 'income' | 'expense' | 'collection' | 'all';
   const monthParam  = searchParams.get('month') || 'all';
 
   const [tab, setTab]             = useState<'business' | 'personal'>(tabParam || 'business');
   const [search, setSearch]       = useState('');
-  const [typeFilter, setTypeFilter] = useState<'income' | 'expense' | 'all'>(typeParam);
+  const [typeFilter, setTypeFilter] = useState<'income' | 'expense' | 'collection' | 'all'>(typeParam);
   const [month, setMonth]         = useState(monthParam);
   const [categoryFilter, setCategoryFilter] = useState(catParam);
   const [page, setPage]           = useState(1);
@@ -1129,6 +1131,7 @@ export default function TransactionsPage() {
                     <SelectItem value="all">הכל</SelectItem>
                     <SelectItem value="income">הכנסות</SelectItem>
                     <SelectItem value="expense">הוצאות</SelectItem>
+                    <SelectItem value="collection">גביה</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
