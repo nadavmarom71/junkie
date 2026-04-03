@@ -61,25 +61,6 @@ const TYPE_ORDER: AccountType[] = ['checking', 'cash', 'credit_card', 'savings',
 
 const BILLING_CYCLE_LABELS = { weekly: 'שבועי', monthly: 'חודשי', annual: 'שנתי' };
 
-// ── SVG Ring ──────────────────────────────────────────────────────────────────
-
-function Ring({ pct, color, size = 40 }: { pct: number; color: string; size?: number }) {
-  const r = (size - 6) / 2;
-  const circ = 2 * Math.PI * r;
-  const fill = Math.min(pct, 100) / 100 * circ;
-  return (
-    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={5} />
-      <circle
-        cx={size / 2} cy={size / 2} r={r} fill="none"
-        stroke={color} strokeWidth={5}
-        strokeDasharray={`${fill} ${circ}`}
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 // ── Account Form ───────────────────────────────────────────────────────────────
 
 interface AccountFormState {
@@ -569,11 +550,11 @@ export default function AccountsPage() {
 
       {/* Grouped account sections */}
       {!isLoading && TYPE_ORDER.map((type) => {
-        const items = grouped[type];
+        const items = (grouped as Record<AccountType, Account[]>)[type];
         if (!items || items.length === 0) return null;
         const meta = TYPE_META[type];
         const Icon = meta.icon;
-        const sectionTotal = items.reduce((s, a) => s + Number(a.balance), 0);
+        const sectionTotal = items.reduce((s: number, a: Account) => s + Number(a.balance), 0);
 
         return (
           <div key={type}>

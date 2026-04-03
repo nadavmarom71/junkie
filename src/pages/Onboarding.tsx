@@ -727,7 +727,7 @@ export default function Onboarding() {
 
     try {
       // Call LLM to extract financial data, convert currencies, and get Hebrew reply
-      const result = await api.post('/onboarding/parse-financial', {
+      const result: any = await api.post('/onboarding/parse-financial', {
         text,
         currentState: {
           liquid: financial.liquid,
@@ -825,7 +825,7 @@ export default function Onboarding() {
     formData.append('type', pdfType);
     try {
       // Pass FormData — axios auto-sets multipart/form-data; override JSON header
-      const result = await api.post('/onboarding/upload-pdfs', formData, {
+      const result: any = await api.post('/onboarding/upload-pdfs', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setPdfResult(result);

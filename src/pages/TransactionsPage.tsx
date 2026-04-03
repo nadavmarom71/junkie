@@ -30,7 +30,7 @@ import type { BusinessTransaction, PersonalExpense } from '@/types';
 // ── Form Schemas ──────────────────────────────────────────────────────────────
 
 const businessSchema = z.object({
-  type: z.enum(['income', 'expense']),
+  type: z.enum(['income', 'expense', 'collection']),
   amount: z.coerce.number().positive('הסכום חייב להיות חיובי'),
   description: z.string().min(1, 'תיאור נדרש'),
   category: z.string().min(1, 'קטגוריה נדרשת'),
