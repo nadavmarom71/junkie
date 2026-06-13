@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+// Always call the API on the SAME origin as the frontend.
+// In prod, Vercel rewrites /api/* to the backend (see vercel.json); in dev,
+// Vite proxies /api to localhost:3001 (see vite.config.ts). This keeps the
+// session cookie first-party so mobile browsers (which block third-party
+// cookies) accept it. Do NOT point this at the cross-origin backend URL.
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+  baseURL: '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },

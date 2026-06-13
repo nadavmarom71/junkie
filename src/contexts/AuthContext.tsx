@@ -2,11 +2,11 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-
-// Separate axios instance for auth calls (bypasses the main interceptor)
+// Same-origin only (see api.ts). Auth calls hit /api/v1/auth/* on this origin,
+// which is proxied to the backend by Vercel (prod) / Vite (dev) so the session
+// cookie stays first-party and works on mobile.
 const authApi = axios.create({
-  baseURL: API_BASE.replace(/\/api\/v1\/?$/, ''),
+  baseURL: '',
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -36,9 +36,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (password: string): Promise<boolean> => {
     try {
       await authApi.post('/api/v1/auth/login', { password });
-      setIsAuthenticated(true);
-      return true;
+      // Confirm the session cookie actually persisted (mobile browsers may
+      // reject it). Don't trust the login response alone — verify via status,
+      // otherwise the app renders but every data request 401s.
+      const res = await authApi.get('/api/v1/auth/status');
+      const ok = res.data?.authenticated === true;
+      setIsAuthenticated(ok);
+      return ok;
     } catch {
+      setIsAuthenticated(false);
       return false;
     }
   };
