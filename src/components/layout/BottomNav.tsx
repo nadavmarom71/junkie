@@ -6,6 +6,8 @@ import {
   Repeat, FileText, Settings, Users2, X, TrendingUp as ForecastIcon, Target, Sparkles, Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import BottomSheet from '@/components/shared/BottomSheet';
+import TabPreviewSheet, { type PreviewKind } from './TabPreviewSheet';
 
 /* ─── Quick actions (FAB) ─── */
 const QUICK_ACTIONS = [
@@ -33,6 +35,7 @@ const MORE_PATHS = MORE_ITEMS.map(i => i.to);
 export default function BottomNav() {
   const [fabOpen, setFabOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [previewKind, setPreviewKind] = useState<PreviewKind>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -40,29 +43,37 @@ export default function BottomNav() {
   useEffect(() => {
     setFabOpen(false);
     setMoreOpen(false);
+    setPreviewKind(null);
   }, [location.pathname]);
+
+  const openPreview = (kind: Exclude<PreviewKind, null>) => {
+    setPreviewKind(kind);
+    setFabOpen(false);
+    setMoreOpen(false);
+  };
 
   const isMoreActive = MORE_PATHS.some(p => location.pathname.startsWith(p));
 
   return (
     <>
       {/* ── FAB Quick Actions Sheet ── */}
-      {fabOpen && (
-        <div className="fixed inset-0 z-[60] lg:hidden" onClick={() => setFabOpen(false)}>
-          <div
-            className="absolute inset-0"
-            style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
-          />
-          <div
-            className="absolute bottom-24 left-1/2 -translate-x-1/2 rounded-2xl py-2 min-w-56 animate-slide-up"
-            style={{
-              background: 'rgba(21,29,46,0.98)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              boxShadow: '0 -8px 40px rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(20px)',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
+      <BottomSheet open={fabOpen} onClose={() => setFabOpen(false)}>
+        <div
+          className="rounded-t-3xl"
+          style={{
+            background: 'rgba(21,29,46,0.98)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderBottom: 'none',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(20px)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
+          }}
+        >
+          {/* Drag handle */}
+          <div className="flex justify-center pt-3 pb-2">
+            <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
+          </div>
+          <div className="py-1">
             {QUICK_ACTIONS.map(({ label, icon: Icon, color, path }) => (
               <button
                 key={label}
@@ -80,79 +91,75 @@ export default function BottomNav() {
             ))}
           </div>
         </div>
-      )}
+      </BottomSheet>
 
       {/* ── "More" Bottom Sheet ── */}
-      {moreOpen && (
-        <div className="fixed inset-0 z-[60] lg:hidden" onClick={() => setMoreOpen(false)}>
-          <div
-            className="absolute inset-0 transition-opacity duration-200"
-            style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
-          />
-          <div
-            className="absolute bottom-0 left-0 right-0 rounded-t-3xl animate-slide-up"
-            style={{
-              background: '#0D1117',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderBottom: 'none',
-              boxShadow: '0 -12px 48px rgba(0,0,0,0.5)',
-              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
-            </div>
+      <BottomSheet open={moreOpen} onClose={() => setMoreOpen(false)}>
+        <div
+          className="rounded-t-3xl"
+          style={{
+            background: '#0D1117',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderBottom: 'none',
+            boxShadow: '0 -12px 48px rgba(0,0,0,0.5)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
+          }}
+        >
+          {/* Drag handle */}
+          <div className="flex justify-center pt-3 pb-2">
+            <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
+          </div>
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pb-3">
-              <h3 className="text-base font-bold text-white">כל הדפים</h3>
-              <button
-                onClick={() => setMoreOpen(false)}
-                className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
-              >
-                <X className="h-4 w-4" style={{ color: 'rgba(255,255,255,0.4)' }} />
-              </button>
-            </div>
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pb-3">
+            <h3 className="text-base font-bold text-white">כל הדפים</h3>
+            <button
+              onClick={() => setMoreOpen(false)}
+              className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <X className="h-4 w-4" style={{ color: 'rgba(255,255,255,0.4)' }} />
+            </button>
+          </div>
 
-            {/* Grid of nav items */}
-            <div className="grid grid-cols-4 gap-1 px-4 pb-4" dir="rtl">
-              {MORE_ITEMS.map(({ to, icon: Icon, label, accent }) => {
-                const isActive = location.pathname.startsWith(to);
-                const activeColor = accent || '#2563EB';
-                return (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    onClick={() => setMoreOpen(false)}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-colors active:bg-white/5"
-                    style={isActive ? { background: `${activeColor}15` } : undefined}
+          {/* Grid of nav items */}
+          <div className="grid grid-cols-4 gap-1 px-4 pb-4" dir="rtl">
+            {MORE_ITEMS.map(({ to, icon: Icon, label, accent }) => {
+              const isActive = location.pathname.startsWith(to);
+              const activeColor = accent || '#2563EB';
+              return (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={() => setMoreOpen(false)}
+                  className="flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-colors active:bg-white/5"
+                  style={isActive ? { background: `${activeColor}15` } : undefined}
+                >
+                  <div
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center"
+                    style={{
+                      background: isActive ? `${activeColor}20` : 'rgba(255,255,255,0.05)',
+                    }}
                   >
-                    <div
-                      className="w-11 h-11 rounded-2xl flex items-center justify-center"
-                      style={{
-                        background: isActive ? `${activeColor}20` : 'rgba(255,255,255,0.05)',
-                      }}
-                    >
-                      <Icon
-                        className="h-5 w-5"
-                        style={{ color: isActive ? activeColor : 'rgba(255,255,255,0.45)' }}
-                      />
-                    </div>
-                    <span
-                      className="text-[11px] font-medium leading-tight text-center"
-                      style={{ color: isActive ? activeColor : 'rgba(255,255,255,0.5)' }}
-                    >
-                      {label}
-                    </span>
-                  </NavLink>
-                );
-              })}
-            </div>
+                    <Icon
+                      className="h-5 w-5"
+                      style={{ color: isActive ? activeColor : 'rgba(255,255,255,0.45)' }}
+                    />
+                  </div>
+                  <span
+                    className="text-[11px] font-medium leading-tight text-center"
+                    style={{ color: isActive ? activeColor : 'rgba(255,255,255,0.5)' }}
+                  >
+                    {label}
+                  </span>
+                </NavLink>
+              );
+            })}
           </div>
         </div>
-      )}
+      </BottomSheet>
+
+      {/* ── Tab preview sheet (Transactions / Collections) ── */}
+      <TabPreviewSheet kind={previewKind} onClose={() => setPreviewKind(null)} />
 
       {/* ── Bottom Tab Bar ── */}
       <nav
@@ -169,8 +176,13 @@ export default function BottomNav() {
           {/* Tab: Dashboard */}
           <TabItem to="/" icon={LayoutDashboard} label="ראשי" exact />
 
-          {/* Tab: Transactions */}
-          <TabItem to="/transactions" icon={ArrowLeftRight} label="עסקאות" />
+          {/* Tab: Transactions — opens preview sheet */}
+          <PreviewTab
+            icon={ArrowLeftRight}
+            label="עסקאות"
+            active={location.pathname.startsWith('/transactions')}
+            onClick={() => openPreview('transactions')}
+          />
 
           {/* FAB */}
           <button
@@ -192,8 +204,13 @@ export default function BottomNav() {
             />
           </button>
 
-          {/* Tab: Collections */}
-          <TabItem to="/collections" icon={Banknote} label="גבייה" />
+          {/* Tab: Collections — opens preview sheet */}
+          <PreviewTab
+            icon={Banknote}
+            label="גבייה"
+            active={location.pathname.startsWith('/collections')}
+            onClick={() => openPreview('collections')}
+          />
 
           {/* Tab: More */}
           <button
@@ -217,6 +234,25 @@ export default function BottomNav() {
         </div>
       </nav>
     </>
+  );
+}
+
+/* ─── Tab that opens a preview sheet instead of navigating ─── */
+function PreviewTab({
+  icon: Icon, label, active, onClick,
+}: {
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const color = active ? '#2563EB' : 'rgba(255,255,255,0.35)';
+  return (
+    <button onClick={onClick} className="flex flex-col items-center gap-0.5 px-2 py-1.5 min-w-[48px] relative">
+      <Icon className="h-5 w-5" style={{ color }} />
+      <span className="text-[10px] font-medium" style={{ color }}>{label}</span>
+      {active && <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-blue-500" />}
+    </button>
   );
 }
 
