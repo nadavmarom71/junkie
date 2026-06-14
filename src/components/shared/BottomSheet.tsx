@@ -32,8 +32,13 @@ export default function BottomSheet({ open, onClose, children, dismissThreshold 
     if (open) {
       clearTimeout(closeTimer.current);
       setVisible(true);
-      const r = requestAnimationFrame(() => setShown(true));
-      return () => cancelAnimationFrame(r);
+      setShown(false); // start from the closed position (translateY 100%)
+      // Double rAF: guarantee the browser paints the closed state for one
+      // frame before flipping to open, so the slide-up actually animates
+      // (a single rAF can be coalesced into the same paint → looks like a jump).
+      let r2 = 0;
+      const r1 = requestAnimationFrame(() => { r2 = requestAnimationFrame(() => setShown(true)); });
+      return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2); };
     }
     // closing: play exit, then unmount
     setShown(false);
