@@ -117,7 +117,7 @@ function AccountFormDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
-      <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.1)' }}>
+      <div className="w-full max-w-sm rounded-2xl p-5 space-y-4 max-h-[90dvh] overflow-y-auto" style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.1)' }}>
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-base">{account ? 'עריכת חשבון' : 'חשבון חדש'}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10"><X size={16} /></button>
@@ -202,7 +202,7 @@ function SubFormDialog({ accounts, onClose, onSave }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
-      <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.1)' }}>
+      <div className="w-full max-w-sm rounded-2xl p-5 space-y-4 max-h-[90dvh] overflow-y-auto" style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.1)' }}>
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-base">מנוי חדש</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10"><X size={16} /></button>

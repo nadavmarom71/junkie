@@ -319,19 +319,21 @@ export default function ForecastPage() {
             </div>
 
             {/* Retainer breakdown table */}
-            <div className="rounded-xl overflow-hidden mb-4" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div className="grid grid-cols-3 gap-4 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.02)' }}>
-                <span>לקוח</span>
-                <span>סכום חודשי</span>
-                <span>שנתי</span>
-              </div>
-              {(retainers.months[0]?.breakdown || []).map((r) => (
-                <div key={r.id} className="grid grid-cols-3 gap-4 px-4 py-3 text-sm" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                  <span className="font-medium">{r.name}</span>
-                  <span className="text-emerald-400 font-semibold">{formatCurrency(r.amount)}</span>
-                  <span style={{ color: 'rgba(255,255,255,0.5)' }}>{formatCurrency(r.amount * 12)}</span>
+            <div className="rounded-xl overflow-x-auto mb-4" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="min-w-[320px]">
+                <div className="grid grid-cols-3 gap-4 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.02)' }}>
+                  <span>לקוח</span>
+                  <span>סכום חודשי</span>
+                  <span>שנתי</span>
                 </div>
-              ))}
+                {(retainers.months[0]?.breakdown || []).map((r) => (
+                  <div key={r.id} className="grid grid-cols-3 gap-4 px-4 py-3 text-sm" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                    <span className="font-medium">{r.name}</span>
+                    <span className="text-emerald-400 font-semibold">{formatCurrency(r.amount)}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>{formatCurrency(r.amount * 12)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <ResponsiveContainer width="100%" height={160}>

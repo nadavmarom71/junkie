@@ -43,7 +43,7 @@ export default function CollectionsPage() {
 
       {/* Summary cards */}
       {summary && (
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
           <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div className="text-xs mb-1" style={{ color: 'var(--t2)' }}>סה"כ לגבייה</div>
             <div className="text-lg font-extrabold text-yellow-400">₪{Number(summary.total_pending).toLocaleString('he-IL')}</div>

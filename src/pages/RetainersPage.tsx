@@ -211,7 +211,7 @@ export default function RetainersPage() {
 
       {/* Summary */}
       {summary && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <Card>
             <CardContent className="pt-5 text-center">
               <p className="text-2xl font-bold text-green-400">{formatCurrency(summary.monthly_total)}</p>

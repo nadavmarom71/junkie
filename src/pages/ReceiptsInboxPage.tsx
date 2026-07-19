@@ -82,7 +82,7 @@ function ApproveModal({
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-md rounded-2xl p-6 space-y-5"
+        className="relative w-full max-w-md rounded-2xl p-6 space-y-5 max-h-[90dvh] overflow-y-auto"
         style={{
           background: 'linear-gradient(145deg, #161B22, #0D1117)',
           border: '1px solid rgba(255,255,255,0.1)',
