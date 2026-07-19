@@ -193,3 +193,17 @@
   background: #0D1117 !important;
   border-color: rgba(255,255,255,0.10) !important;
 }
+
+/* ── Native browser controls: dark color-scheme ─────────────
+   Without this, the browser renders calendar icons, select arrows,
+   number spinners, etc. using dark-colored glyphs, which are
+   invisible against this app's dark background (#080B14). */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+input[type="number"],
+select {
+  color-scheme: dark;
+}
