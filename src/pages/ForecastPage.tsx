@@ -37,7 +37,7 @@ function StatBox({ label, value, sub, accent = 'white' }: { label: string; value
     <div className="flex flex-col">
       <span className="text-xs font-medium tracking-wide uppercase" style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</span>
       <span className={cn('text-base sm:text-lg font-bold mt-0.5', accent === 'green' && 'text-emerald-400', accent === 'red' && 'text-red-400')}>{value}</span>
-      {sub && <span className="text-[11px] sm:text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{sub}</span>}
+      {sub && <span className="text-[11px] sm:text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>{sub}</span>}
     </div>
   );
 }
@@ -261,7 +261,7 @@ export default function ForecastPage() {
                 </div>
                 {m.scheduled_payments > 0 && (
                   <div className="flex justify-between">
-                    <span style={{ color: 'rgba(255,255,255,0.3)' }}>תשלומים מתוכננים</span>
+                    <span style={{ color: 'rgba(255,255,255,0.55)' }}>תשלומים מתוכננים</span>
                     <span className="font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>{formatCurrency(m.scheduled_payments)}</span>
                   </div>
                 )}
@@ -353,10 +353,10 @@ export default function ForecastPage() {
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
-              <CalendarDays size={24} style={{ color: 'rgba(255,255,255,0.2)' }} />
+              <CalendarDays size={24} style={{ color: 'rgba(255,255,255,0.5)' }} />
             </div>
-            <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.4)' }}>אין ריטיינרים פעילים</p>
-            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.25)' }}>הוסף ריטיינר כדי לראות תחזית הכנסה קבועה</p>
+            <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.6)' }}>אין ריטיינרים פעילים</p>
+            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>הוסף ריטיינר כדי לראות תחזית הכנסה קבועה</p>
           </div>
         )}
       </SectionCard>

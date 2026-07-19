@@ -118,7 +118,7 @@ function SidebarContent({ onClose, closeOnNav }: { onClose: () => void; closeOnN
 
       {/* Footer */}
       <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-        <p className="text-xs text-center" style={{ color: 'var(--t3)' }}>Junkie v1.0</p>
+        <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.5)' }}>Junkie v1.0</p>
       </div>
     </>
   );

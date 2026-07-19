@@ -317,7 +317,7 @@ export default function DashboardPage() {
                   <Target size={16} className="text-emerald-400" />
                   התקדמות יעדים
                 </h3>
-                <Link to="/goals" className="text-xs flex items-center gap-1 hover:text-white transition-colors" style={{ color: 'var(--t3)' }}>
+                <Link to="/goals" className="text-xs flex items-center gap-1 hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.55)' }}>
                   לכל היעדים
                   <ArrowLeft size={12} />
                 </Link>

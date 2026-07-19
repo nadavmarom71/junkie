@@ -47,7 +47,7 @@ function TabBar({
                     boxShadow: '0 2px 12px rgba(124,58,237,0.2)',
                   }
                 : {
-                    color: 'rgba(255,255,255,0.3)',
+                    color: 'rgba(255,255,255,0.55)',
                     border: '1px solid transparent',
                   }
             }
