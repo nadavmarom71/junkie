@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Eye, Plus, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Eye, Plus, X, ArrowLeftRight } from 'lucide-react';
 import { usePartnership, calcIncomeBreakdown, calcExpenseBreakdown } from './PartnershipContext';
 import type { Payer, LinkedExpense } from './PartnershipContext';
 
@@ -12,23 +12,35 @@ function fmt(n: number) {
 function IncomeForm({ onSaved }: { onSaved: () => void }) {
   const { state, dispatch } = usePartnership();
   const today = new Date().toISOString().split('T')[0];
+  const todayDay = new Date().getDate();
+
   const [desc, setDesc] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(today);
   const [saved, setSaved] = useState(false);
 
-  // Linked expenses state
+  // Custom split override (null = use defaults)
+  const [customSplitOn, setCustomSplitOn] = useState(false);
+  const [customNadav, setCustomNadav] = useState(state.settings.nadavSplit);
+
+  // Recurring
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringDay, setRecurringDay] = useState(todayDay);
+
+  // Linked expenses
   const [linkedExpenses, setLinkedExpenses] = useState<LinkedExpense[]>([]);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [expDesc, setExpDesc] = useState('');
   const [expAmount, setExpAmount] = useState('');
   const [expCategory, setExpCategory] = useState(state.settings.expenseCategories[0]);
 
+  const splitOverride = customSplitOn ? { nadav: customNadav, david: 100 - customNadav } : undefined;
+
   const preview = useMemo(() => {
     const n = parseFloat(amount);
     if (!n || n <= 0) return null;
-    return calcIncomeBreakdown(n, state.settings, linkedExpenses);
-  }, [amount, state.settings, linkedExpenses]);
+    return calcIncomeBreakdown(n, state.settings, linkedExpenses, splitOverride);
+  }, [amount, state.settings, linkedExpenses, customSplitOn, customNadav]);
 
   function addLinkedExpense() {
     const n = parseFloat(expAmount);
@@ -58,16 +70,22 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
         description: desc,
         amount: n,
         linkedExpenses: linkedExpenses.length > 0 ? linkedExpenses : undefined,
-        breakdown: calcIncomeBreakdown(n, state.settings, linkedExpenses),
+        breakdown: calcIncomeBreakdown(n, state.settings, linkedExpenses, splitOverride),
         createdAt: new Date().toISOString(),
+        splitOverride,
+        recurring: isRecurring ? { dayOfMonth: recurringDay } : undefined,
       },
     });
     setDesc(''); setAmount(''); setDate(today); setLinkedExpenses([]);
+    setCustomSplitOn(false); setCustomNadav(state.settings.nadavSplit);
+    setIsRecurring(false);
     setSaved(true);
     setTimeout(() => { setSaved(false); onSaved(); }, 900);
   }
 
   const linkedTotal = linkedExpenses.reduce((s, e) => s + e.amount, 0);
+  const effectiveNadav = customSplitOn ? customNadav : state.settings.nadavSplit;
+  const effectiveDavid = 100 - effectiveNadav;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -101,6 +119,81 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
         />
       </div>
 
+      {/* ── Custom Split Override ── */}
+      <div
+        className="rounded-xl p-3.5 transition-colors"
+        style={
+          customSplitOn
+            ? { background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.3)' }
+            : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }
+        }
+      >
+        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox" checked={customSplitOn} onChange={e => setCustomSplitOn(e.target.checked)}
+            className="w-4 h-4 accent-blue-500 flex-shrink-0"
+          />
+          <div>
+            <span className="text-sm font-semibold text-white">שנה חלוקה לעסקה זו</span>
+            <span className="text-xs text-white/40 me-2">
+              {customSplitOn
+                ? ` נדב ${effectiveNadav}% / דוד ${effectiveDavid}%`
+                : ` ברירת מחדל: נדב ${state.settings.nadavSplit}% / דוד ${state.settings.davidSplit}%`}
+            </span>
+          </div>
+        </label>
+        {customSplitOn && (
+          <div className="mt-3">
+            <div className="flex justify-between text-xs mb-1.5">
+              <span className="text-blue-400 font-bold">נדב {effectiveNadav}%</span>
+              <span className="text-purple-400 font-bold">דוד {effectiveDavid}%</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-blue-400 font-bold w-6">0%</span>
+              <input
+                type="range" min="0" max="100" step="5"
+                value={customNadav} onChange={e => setCustomNadav(Number(e.target.value))}
+                className="flex-1 accent-blue-500"
+              />
+              <span className="text-xs text-purple-400 font-bold w-9 text-right">100%</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Recurring Income ── */}
+      <div
+        className="rounded-xl p-3.5 transition-colors"
+        style={
+          isRecurring
+            ? { background: 'rgba(0,196,140,0.07)', border: '1px solid rgba(0,196,140,0.25)' }
+            : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }
+        }
+      >
+        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)}
+            className="w-4 h-4 accent-emerald-500 flex-shrink-0"
+          />
+          <div>
+            <span className="text-sm font-semibold text-white">🔄 הכנסה חוזרת (ריטיינר)</span>
+            <p className="text-xs text-white/40 mt-0.5">תופיע אוטומטית מדי חודש</p>
+          </div>
+        </label>
+        {isRecurring && (
+          <div className="flex items-center gap-2.5 mt-3 pe-1">
+            <span className="text-sm text-white/60">יום</span>
+            <input
+              type="number" min="1" max="31"
+              value={recurringDay}
+              onChange={e => setRecurringDay(Math.min(31, Math.max(1, Number(e.target.value))))}
+              className="w-14 rounded-lg px-2 py-1.5 text-sm font-bold text-center bg-white/8 border border-white/15 text-white focus:outline-none focus:border-emerald-500/50"
+            />
+            <span className="text-sm text-white/60">בחודש</span>
+          </div>
+        )}
+      </div>
+
       {/* ── Linked Expenses Section ── */}
       <div
         className="rounded-2xl p-4 space-y-3"
@@ -124,7 +217,6 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
           </button>
         </div>
 
-        {/* Add expense mini-form */}
         {showAddExpense && (
           <div className="space-y-2 pt-2" style={{ borderTop: '1px solid rgba(244,63,94,0.15)' }}>
             <div className="grid grid-cols-2 gap-2">
@@ -154,7 +246,6 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
           </div>
         )}
 
-        {/* Linked expense list */}
         {linkedExpenses.map(exp => (
           <div key={exp.id} className="flex items-center justify-between py-1.5">
             <div className="min-w-0">
@@ -220,11 +311,11 @@ function IncomeForm({ onSaved }: { onSaved: () => void }) {
               <span className="text-white font-bold">₪{fmt(preview.netIncome)}</span>
             </div>
             <div className="flex justify-between mt-1">
-              <span className="text-blue-400">נדב ({state.settings.nadavSplit}%)</span>
+              <span className="text-blue-400">נדב ({effectiveNadav}%)</span>
               <span className="text-blue-400 font-bold">+₪{fmt(preview.nadavShare)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-purple-400">דוד ({state.settings.davidSplit}%)</span>
+              <span className="text-purple-400">דוד ({effectiveDavid}%)</span>
               <span className="text-purple-400 font-bold">+₪{fmt(preview.davidShare)}</span>
             </div>
             <div className="flex justify-between pt-1.5 border-t border-white/10">
@@ -465,49 +556,258 @@ function ExpenseForm({ onSaved }: { onSaved: () => void }) {
   );
 }
 
+// ── Direct Transfer Form ──────────────────────────────────────────────────────
+// Records a direct cash transfer between partners (e.g. Nadav paid David ₪4,400
+// for [reason]) and reduces the corresponding "who owes whom" balance.
+
+function TransferForm({ onSaved }: { onSaved: () => void }) {
+  const { state, computed, dispatch } = usePartnership();
+  const today = new Date().toISOString().split('T')[0];
+
+  const [amount, setAmount] = useState('');
+  const [desc, setDesc] = useState('');
+  const [date, setDate] = useState(today);
+  const [paidBy, setPaidBy] = useState<Payer>('nadav'); // who initiated the payment
+  const [saved, setSaved] = useState(false);
+
+  // Preview: what will the balance look like after this transfer
+  const preview = useMemo(() => {
+    const n = parseFloat(amount);
+    if (!n || n <= 0) return null;
+    if (paidBy === 'nadav') {
+      // Nadav → David: reduces "נדב חייב לדוד"
+      const after = Math.max(0, computed.nadavOwesDavid - n);
+      const newDavidOwes = n > computed.nadavOwesDavid
+        ? computed.davidOwesNadav + (n - computed.nadavOwesDavid)
+        : computed.davidOwesNadav;
+      return {
+        direction: 'נדב → דוד',
+        balanceBefore: computed.nadavOwesDavid,
+        balanceLabel: 'נדב חייב לדוד',
+        balanceAfter: after,
+        newDavidOwes,
+        color: '#f97316',
+      };
+    } else {
+      // David → Nadav: reduces "דוד חייב לנדב"
+      const after = Math.max(0, computed.davidOwesNadav - n);
+      const newNadavOwes = n > computed.davidOwesNadav
+        ? computed.nadavOwesDavid + (n - computed.davidOwesNadav)
+        : computed.nadavOwesDavid;
+      return {
+        direction: 'דוד → נדב',
+        balanceBefore: computed.davidOwesNadav,
+        balanceLabel: 'דוד חייב לנדב',
+        balanceAfter: after,
+        newNadavOwes: newNadavOwes,
+        color: '#a78bfa',
+      };
+    }
+  }, [amount, paidBy, computed]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const n = parseFloat(amount);
+    if (!n || !desc || !date) return;
+    dispatch({
+      type: 'ADD_SETTLEMENT',
+      payload: {
+        id: `stl_${Date.now()}`,
+        date,
+        description: desc,
+        nadavOwesDavidCleared: paidBy === 'nadav' ? n : 0,
+        davidOwesNadavCleared: paidBy === 'david' ? n : 0,
+        createdAt: new Date().toISOString(),
+      },
+    });
+    setAmount(''); setDesc(''); setDate(today);
+    setSaved(true);
+    setTimeout(() => { setSaved(false); onSaved(); }, 900);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Direction */}
+      <div>
+        <label className="text-sm font-semibold text-white/60 block mb-2">מי העביר לאיזה כיוון?</label>
+        <div
+          className="flex rounded-2xl p-1 gap-1"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <button
+            type="button"
+            onClick={() => setPaidBy('nadav')}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
+            style={
+              paidBy === 'nadav'
+                ? { background: 'linear-gradient(135deg,#ea580c,#f97316)', color: '#fff', boxShadow: '0 3px 10px rgba(249,115,22,0.3)' }
+                : { color: 'rgba(255,255,255,0.35)' }
+            }
+          >
+            נדב → דוד
+          </button>
+          <button
+            type="button"
+            onClick={() => setPaidBy('david')}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
+            style={
+              paidBy === 'david'
+                ? { background: 'linear-gradient(135deg,#6d28d9,#7c3aed)', color: '#fff', boxShadow: '0 3px 10px rgba(124,58,237,0.3)' }
+                : { color: 'rgba(255,255,255,0.35)' }
+            }
+          >
+            דוד → נדב
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-semibold text-white/60 block mb-1.5">סכום (₪)</label>
+          <input
+            type="number" min="0" step="0.01"
+            value={amount} onChange={e => setAmount(e.target.value)}
+            placeholder="0"
+            className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-orange-500/50 transition-colors"
+            required
+          />
+        </div>
+        <div>
+          <label className="text-sm font-semibold text-white/60 block mb-1.5">תאריך</label>
+          <input
+            type="date" value={date} onChange={e => setDate(e.target.value)}
+            className="w-full rounded-xl px-3 py-2.5 text-sm bg-white/5 border border-white/10 text-white focus:outline-none focus:border-orange-500/50 transition-colors"
+            required
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-sm font-semibold text-white/60 block mb-1.5">על מה / סיבה</label>
+        <input
+          type="text" value={desc} onChange={e => setDesc(e.target.value)}
+          placeholder="לדוגמה: העברה לדוד עבור הוצאות שוטפות"
+          className="w-full rounded-xl px-3 py-2.5 text-sm bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-orange-500/50 transition-colors"
+          required
+        />
+      </div>
+
+      {/* Current balances context */}
+      <div
+        className="rounded-xl p-3 grid grid-cols-2 gap-3"
+        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+      >
+        <div className="text-center">
+          <p className="text-xs text-white/40 mb-0.5">נדב חייב לדוד</p>
+          <p className="text-base font-bold text-orange-400">₪{fmt(computed.nadavOwesDavid)}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-white/40 mb-0.5">דוד חייב לנדב</p>
+          <p className="text-base font-bold text-purple-400">₪{fmt(computed.davidOwesNadav)}</p>
+        </div>
+      </div>
+
+      {/* Preview */}
+      {preview && (
+        <div
+          className="rounded-2xl p-3.5 space-y-2"
+          style={{ background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.2)' }}
+        >
+          <div className="flex items-center gap-1.5 mb-2">
+            <ArrowLeftRight size={13} color="#f97316" />
+            <span className="text-sm font-bold text-orange-400">תצוגה מקדימה</span>
+          </div>
+          <div className="space-y-1.5 text-sm">
+            <div className="flex justify-between">
+              <span className="text-white/50">כיוון</span>
+              <span className="text-white font-semibold">{preview.direction}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white/50">{preview.balanceLabel} — לפני</span>
+              <span className="text-white/70 font-semibold">₪{fmt(preview.balanceBefore)}</span>
+            </div>
+            <div className="flex justify-between border-t border-white/10 pt-1.5">
+              <span className="text-white/70 font-semibold">{preview.balanceLabel} — אחרי</span>
+              <span className="text-green-400 font-bold">₪{fmt(preview.balanceAfter)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        className="w-full rounded-2xl py-3 font-bold text-sm transition-all active:scale-98"
+        style={{
+          background: saved
+            ? 'linear-gradient(135deg,#00C48C,#059669)'
+            : paidBy === 'nadav'
+            ? 'linear-gradient(135deg,#ea580c,#f97316)'
+            : 'linear-gradient(135deg,#6d28d9,#7c3aed)',
+          color: '#fff',
+          boxShadow: saved
+            ? '0 6px 20px rgba(0,196,140,0.3)'
+            : paidBy === 'nadav'
+            ? '0 6px 20px rgba(249,115,22,0.3)'
+            : '0 6px 20px rgba(124,58,237,0.3)',
+        }}
+      >
+        {saved ? '✓ נשמר!' : `רשום העברה — ${paidBy === 'nadav' ? 'נדב → דוד' : 'דוד → נדב'}`}
+      </button>
+    </form>
+  );
+}
+
 // ── Main Add View ─────────────────────────────────────────────────────────────
 
+type TxTab = 'income' | 'expense' | 'transfer';
+
 export default function AddTransaction({ onSaved }: { onSaved: () => void }) {
-  const [txType, setTxType] = useState<'income' | 'expense'>('income');
+  const [tab, setTab] = useState<TxTab>('income');
+
+  const tabs: { key: TxTab; label: string; color: string; activeStyle: React.CSSProperties }[] = [
+    {
+      key: 'income',
+      label: '↑ הכנסה',
+      color: '#00C48C',
+      activeStyle: { background: 'linear-gradient(135deg,#059669,#00C48C)', color: '#fff', boxShadow: '0 4px 12px rgba(0,196,140,0.3)' },
+    },
+    {
+      key: 'expense',
+      label: '↓ הוצאה',
+      color: '#F43F5E',
+      activeStyle: { background: 'linear-gradient(135deg,#dc2626,#F43F5E)', color: '#fff', boxShadow: '0 4px 12px rgba(244,63,94,0.3)' },
+    },
+    {
+      key: 'transfer',
+      label: '⇄ העברה',
+      color: '#f97316',
+      activeStyle: { background: 'linear-gradient(135deg,#ea580c,#f97316)', color: '#fff', boxShadow: '0 4px 12px rgba(249,115,22,0.3)' },
+    },
+  ];
 
   return (
     <div className="space-y-4">
-      {/* Type Toggle */}
+      {/* Tab Toggle */}
       <div
         className="flex rounded-2xl p-1 gap-1"
         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
       >
-        <button
-          type="button"
-          onClick={() => setTxType('income')}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all"
-          style={
-            txType === 'income'
-              ? { background: 'linear-gradient(135deg,#059669,#00C48C)', color: '#fff', boxShadow: '0 4px 12px rgba(0,196,140,0.3)' }
-              : { color: 'rgba(255,255,255,0.35)' }
-          }
-        >
-          <TrendingUp size={15} />
-          הכנסה
-        </button>
-        <button
-          type="button"
-          onClick={() => setTxType('expense')}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all"
-          style={
-            txType === 'expense'
-              ? { background: 'linear-gradient(135deg,#dc2626,#F43F5E)', color: '#fff', boxShadow: '0 4px 12px rgba(244,63,94,0.3)' }
-              : { color: 'rgba(255,255,255,0.35)' }
-          }
-        >
-          <TrendingDown size={15} />
-          הוצאה
-        </button>
+        {tabs.map(t => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all"
+            style={tab === t.key ? t.activeStyle : { color: 'rgba(255,255,255,0.35)' }}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {txType === 'income'
-        ? <IncomeForm onSaved={onSaved} />
-        : <ExpenseForm onSaved={onSaved} />}
+      {tab === 'income' && <IncomeForm onSaved={onSaved} />}
+      {tab === 'expense' && <ExpenseForm onSaved={onSaved} />}
+      {tab === 'transfer' && <TransferForm onSaved={onSaved} />}
     </div>
   );
 }

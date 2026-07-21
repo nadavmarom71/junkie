@@ -62,6 +62,9 @@ export interface PartnershipTx {
   linkedExpenses?: LinkedExpense[]; // income only
   breakdown: TxBreakdown;
   createdAt: string;
+  splitOverride?: { nadav: number; david: number }; // income: per-tx split override
+  recurring?: { dayOfMonth: number };               // income: auto-replicate monthly
+  recurringSourceId?: string;                        // present on auto-generated instances
 }
 
 export interface Settlement {
@@ -106,14 +109,17 @@ type Action =
 export function calcIncomeBreakdown(
   amount: number,
   settings: PartnershipSettings,
-  linkedExpenses: LinkedExpense[] = []
+  linkedExpenses: LinkedExpense[] = [],
+  splitOverride?: { nadav: number; david: number }
 ): IncomeBreakdown {
+  const nadavSplit = splitOverride?.nadav ?? settings.nadavSplit;
+  const davidSplit = splitOverride?.david ?? settings.davidSplit;
   const linkedExpenseTotal = linkedExpenses.reduce((s, e) => s + e.amount, 0);
   const effectiveGross = Math.max(0, amount - linkedExpenseTotal);
   const taxAmount = effectiveGross * (settings.taxRate / 100);
   const netIncome = effectiveGross - taxAmount;
-  const nadavShare = netIncome * (settings.nadavSplit / 100);
-  const davidShare = netIncome * (settings.davidSplit / 100);
+  const nadavShare = netIncome * (nadavSplit / 100);
+  const davidShare = netIncome * (davidSplit / 100);
   return {
     kind: 'income',
     linkedExpenseTotal,
@@ -360,6 +366,70 @@ export function PartnershipProvider({ children }: { children: ReactNode }) {
       });
     return () => { cancelled = true; };
   }, []);
+
+  // Auto-generate missing monthly instances for recurring income transactions
+  useEffect(() => {
+    if (isLoading) return;
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    const sources = state.transactions.filter(
+      t => t.type === 'income' && t.recurring && !t.recurringSourceId
+    );
+    if (sources.length === 0) return;
+
+    const toAdd: PartnershipTx[] = [];
+
+    for (const source of sources) {
+      const srcDate = new Date(source.date + 'T00:00:00');
+      const dayOfMonth = source.recurring!.dayOfMonth;
+
+      // Start from the month AFTER the source's month
+      const cur = new Date(srcDate.getFullYear(), srcDate.getMonth() + 1, 1);
+
+      while (cur <= today) {
+        const yr = cur.getFullYear();
+        const mo = cur.getMonth() + 1;
+        const monthStr = `${yr}-${String(mo).padStart(2, '0')}`;
+
+        // Clamp day to last day of month
+        const lastDay = new Date(yr, mo, 0).getDate();
+        const txDay = Math.min(dayOfMonth, lastDay);
+        const txDateStr = `${monthStr}-${String(txDay).padStart(2, '0')}`;
+
+        // Skip if the billing day hasn't arrived yet this month
+        if (txDateStr > todayStr) {
+          cur.setMonth(cur.getMonth() + 1);
+          continue;
+        }
+
+        const alreadyExists = state.transactions.some(
+          t => t.recurringSourceId === source.id && t.date.startsWith(monthStr)
+        );
+
+        if (!alreadyExists) {
+          toAdd.push({
+            id: `tx_rec_${source.id}_${monthStr}`,
+            type: 'income',
+            date: txDateStr,
+            description: source.description,
+            amount: source.amount,
+            breakdown: calcIncomeBreakdown(source.amount, state.settings, [], source.splitOverride),
+            createdAt: new Date().toISOString(),
+            splitOverride: source.splitOverride,
+            recurringSourceId: source.id,
+          });
+        }
+
+        cur.setMonth(cur.getMonth() + 1);
+      }
+    }
+
+    for (const tx of toAdd) {
+      dispatch({ type: 'ADD_TRANSACTION', payload: tx });
+    }
+  }, [isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Save to localStorage + Supabase on state changes (only after initial load)
   useEffect(() => {
