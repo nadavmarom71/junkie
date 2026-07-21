@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Eye, Plus, X, ArrowLeftRight } from 'lucide-react';
+import { Eye, Plus, X, ArrowLeftRight } from 'lucide-react';
 import { usePartnership, calcIncomeBreakdown, calcExpenseBreakdown } from './PartnershipContext';
 import type { Payer, LinkedExpense } from './PartnershipContext';
 
@@ -561,7 +561,7 @@ function ExpenseForm({ onSaved }: { onSaved: () => void }) {
 // for [reason]) and reduces the corresponding "who owes whom" balance.
 
 function TransferForm({ onSaved }: { onSaved: () => void }) {
-  const { state, computed, dispatch } = usePartnership();
+  const { computed, dispatch } = usePartnership();
   const today = new Date().toISOString().split('T')[0];
 
   const [amount, setAmount] = useState('');
