@@ -581,7 +581,7 @@ function TransferForm({ onSaved }: { onSaved: () => void }) {
         ? computed.davidOwesNadav + (n - computed.nadavOwesDavid)
         : computed.davidOwesNadav;
       return {
-        direction: 'נדב → דוד',
+        direction: 'נדב ← דוד',
         balanceBefore: computed.nadavOwesDavid,
         balanceLabel: 'נדב חייב לדוד',
         balanceAfter: after,
@@ -595,7 +595,7 @@ function TransferForm({ onSaved }: { onSaved: () => void }) {
         ? computed.nadavOwesDavid + (n - computed.davidOwesNadav)
         : computed.nadavOwesDavid;
       return {
-        direction: 'דוד → נדב',
+        direction: 'דוד ← נדב',
         balanceBefore: computed.davidOwesNadav,
         balanceLabel: 'דוד חייב לנדב',
         balanceAfter: after,
@@ -644,7 +644,7 @@ function TransferForm({ onSaved }: { onSaved: () => void }) {
                 : { color: 'rgba(255,255,255,0.35)' }
             }
           >
-            נדב → דוד
+            נדב ← דוד
           </button>
           <button
             type="button"
@@ -656,7 +656,7 @@ function TransferForm({ onSaved }: { onSaved: () => void }) {
                 : { color: 'rgba(255,255,255,0.35)' }
             }
           >
-            דוד → נדב
+            דוד ← נדב
           </button>
         </div>
       </div>
@@ -751,7 +751,7 @@ function TransferForm({ onSaved }: { onSaved: () => void }) {
             : '0 6px 20px rgba(124,58,237,0.3)',
         }}
       >
-        {saved ? '✓ נשמר!' : `רשום העברה — ${paidBy === 'nadav' ? 'נדב → דוד' : 'דוד → נדב'}`}
+        {saved ? '✓ נשמר!' : `רשום העברה — ${paidBy === 'nadav' ? 'נדב ← דוד' : 'דוד ← נדב'}`}
       </button>
     </form>
   );
