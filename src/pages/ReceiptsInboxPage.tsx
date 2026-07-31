@@ -471,7 +471,7 @@ export default function ReceiptsInboxPage() {
             style={
               statusFilter === t.value
                 ? { background: 'rgba(255,255,255,0.12)', color: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }
-                : { color: 'rgba(255,255,255,0.4)' }
+                : { color: 'rgba(255,255,255,0.6)' }
             }
           >
             {t.label}

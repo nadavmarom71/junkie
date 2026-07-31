@@ -35,7 +35,7 @@ function TrendBadge({ direction, label }: { direction: 'growing' | 'declining' |
 function StatBox({ label, value, sub, accent = 'white' }: { label: string; value: string; sub?: string; accent?: string }) {
   return (
     <div className="flex flex-col">
-      <span className="text-xs font-medium tracking-wide uppercase" style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</span>
+      <span className="text-xs font-medium tracking-wide uppercase" style={{ color: 'rgba(255,255,255,0.55)' }}>{label}</span>
       <span className={cn('text-base sm:text-lg font-bold mt-0.5', accent === 'green' && 'text-emerald-400', accent === 'red' && 'text-red-400')}>{value}</span>
       {sub && <span className="text-[11px] sm:text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>{sub}</span>}
     </div>
@@ -59,7 +59,7 @@ function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title
         </div>
         <div>
           <h2 className="text-sm sm:text-base font-bold">{title}</h2>
-          {subtitle && <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{subtitle}</p>}
+          {subtitle && <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>{subtitle}</p>}
         </div>
       </div>
     </div>
@@ -104,7 +104,7 @@ export default function ForecastPage() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">תחזית פיננסית</h1>
-          <p className="text-xs sm:text-sm mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <p className="text-xs sm:text-sm mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
             ניתוח מגמות ותחזיות מבוססות על דפוסי פעילות אמיתיים
           </p>
         </div>

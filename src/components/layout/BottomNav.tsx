@@ -219,11 +219,11 @@ export default function BottomNav() {
           >
             <MoreHorizontal
               className="h-5 w-5"
-              style={{ color: moreOpen || isMoreActive ? '#2563EB' : 'rgba(255,255,255,0.35)' }}
+              style={{ color: moreOpen || isMoreActive ? '#2563EB' : 'rgba(255,255,255,0.55)' }}
             />
             <span
               className="text-[10px] font-medium"
-              style={{ color: moreOpen || isMoreActive ? '#2563EB' : 'rgba(255,255,255,0.35)' }}
+              style={{ color: moreOpen || isMoreActive ? '#2563EB' : 'rgba(255,255,255,0.55)' }}
             >
               עוד
             </span>
@@ -246,7 +246,7 @@ function PreviewTab({
   active: boolean;
   onClick: () => void;
 }) {
-  const color = active ? '#2563EB' : 'rgba(255,255,255,0.35)';
+  const color = active ? '#2563EB' : 'rgba(255,255,255,0.55)';
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-0.5 px-2 py-1.5 min-w-[48px] relative">
       <Icon className="h-5 w-5" style={{ color }} />
@@ -275,11 +275,11 @@ function TabItem({
         <>
           <Icon
             className="h-5 w-5"
-            style={{ color: isActive ? '#2563EB' : 'rgba(255,255,255,0.35)' }}
+            style={{ color: isActive ? '#2563EB' : 'rgba(255,255,255,0.55)' }}
           />
           <span
             className="text-[10px] font-medium"
-            style={{ color: isActive ? '#2563EB' : 'rgba(255,255,255,0.35)' }}
+            style={{ color: isActive ? '#2563EB' : 'rgba(255,255,255,0.55)' }}
           >
             {label}
           </span>

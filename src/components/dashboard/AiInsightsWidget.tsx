@@ -19,7 +19,7 @@ export default function AiInsightsWidget({ insights }: Props) {
         <span className="text-xl font-extrabold">💡 תובנות AI</span>
         <button
           className="text-base font-semibold"
-          style={{ color: '#2563EB' }}
+          style={{ color: '#60a5fa' }}
           onClick={() => navigate('/insights')}
         >
           הכל ←
