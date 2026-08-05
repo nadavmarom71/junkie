@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useCollections, useRemindCollection, useMarkCollectionPaid } from '@/hooks/useCollections';
 import { formatDateShort } from '@/lib/formatters';
 import { toast } from 'sonner';
-import { ChevronDown, Filter } from 'lucide-react';
+import { Filter } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { CollectionTransaction, CollectionsSummary } from '@/types';
 
 const ALL_CLIENTS = 'all';
@@ -134,24 +135,40 @@ export default function CollectionsPage() {
 
           <div className="flex items-center gap-3">
             <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
-              <select
-                id="collections-client-filter"
+              <Select
                 value={activeClientKey}
-                onChange={(event) => setSelectedClientKey(event.target.value)}
-                className="h-11 w-full appearance-none rounded-lg border border-white/10 bg-white/[0.04] pe-3 ps-10 text-sm font-semibold text-white transition-colors hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#080b14]"
-                aria-describedby="collections-filter-result-count"
+                onValueChange={setSelectedClientKey}
+                dir="rtl"
               >
-                <option value={ALL_CLIENTS}>כל הלקוחות ({clientOptions.length})</option>
-                {clientOptions.map((client) => (
-                  <option key={client.key} value={client.key}>
-                    {client.name} ({client.count})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50"
-                aria-hidden="true"
-              />
+                <SelectTrigger
+                  id="collections-client-filter"
+                  className="h-11 w-full rounded-lg border-white/10 bg-[#111621] px-3 text-sm font-semibold text-white shadow-none hover:border-white/20 hover:bg-[#161c29] focus-visible:border-blue-400/70 focus-visible:ring-2 focus-visible:ring-blue-400/40"
+                  aria-describedby="collections-filter-result-count"
+                  aria-label="בחירת לקוח לסינון הגבייה"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent
+                  align="end"
+                  className="min-w-[var(--radix-select-trigger-width)] border-white/10 bg-[#111621] p-1 text-white shadow-xl shadow-black/40"
+                >
+                  <SelectItem
+                    value={ALL_CLIENTS}
+                    className="text-white focus:bg-blue-500/20 focus:text-white data-[state=checked]:bg-blue-500/15"
+                  >
+                    כל הלקוחות ({clientOptions.length})
+                  </SelectItem>
+                  {clientOptions.map((client) => (
+                    <SelectItem
+                      key={client.key}
+                      value={client.key}
+                      className="text-white focus:bg-blue-500/20 focus:text-white data-[state=checked]:bg-blue-500/15"
+                    >
+                      {client.name} ({client.count})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <span
               id="collections-filter-result-count"
