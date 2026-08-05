@@ -1,7 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useCollections, useRemindCollection, useMarkCollectionPaid } from '@/hooks/useCollections';
 import { formatDateShort } from '@/lib/formatters';
 import { toast } from 'sonner';
+import { ChevronDown, Filter } from 'lucide-react';
+import type { CollectionTransaction, CollectionsSummary } from '@/types';
+
+const ALL_CLIENTS = 'all';
+
+function getClientFilterKey(transaction: CollectionTransaction) {
+  return transaction.client_id
+    ? `client:${transaction.client_id}`
+    : `name:${transaction.client_name.trim().toLocaleLowerCase('he-IL')}`;
+}
 
 export default function CollectionsPage() {
   const { data, isLoading } = useCollections();
@@ -9,9 +19,9 @@ export default function CollectionsPage() {
   const markPaid = useMarkCollectionPaid();
   const [remindedIds, setRemindedIds] = useState<Set<string>>(new Set());
   const [paidIds, setPaidIds] = useState<Set<string>>(new Set());
+  const [selectedClientKey, setSelectedClientKey] = useState(ALL_CLIENTS);
 
-  const transactions = (data as any)?.data || [];
-  const summary = (data as any)?.summary;
+  const transactions = useMemo(() => data?.data ?? [], [data?.data]);
 
   const handleRemind = (id: string) => {
     remind.mutate(id, {
@@ -20,6 +30,50 @@ export default function CollectionsPage() {
   };
 
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+
+  const visibleTransactions = useMemo(
+    () => transactions.filter((transaction) => !hiddenIds.has(transaction.id)),
+    [transactions, hiddenIds]
+  );
+
+  const clientOptions = useMemo(() => {
+    const clients = new Map<string, { key: string; name: string; count: number }>();
+
+    visibleTransactions.forEach((transaction) => {
+      const key = getClientFilterKey(transaction);
+      const current = clients.get(key);
+
+      clients.set(key, {
+        key,
+        name: transaction.client_name,
+        count: (current?.count ?? 0) + 1,
+      });
+    });
+
+    return [...clients.values()].sort((a, b) => a.name.localeCompare(b.name, 'he'));
+  }, [visibleTransactions]);
+
+  const activeClientKey = selectedClientKey === ALL_CLIENTS || clientOptions.some(({ key }) => key === selectedClientKey)
+    ? selectedClientKey
+    : ALL_CLIENTS;
+
+  const filteredTransactions = useMemo(
+    () => activeClientKey === ALL_CLIENTS
+      ? visibleTransactions
+      : visibleTransactions.filter((transaction) => getClientFilterKey(transaction) === activeClientKey),
+    [activeClientKey, visibleTransactions]
+  );
+
+  const filteredSummary = useMemo<CollectionsSummary>(() => ({
+    total_pending: filteredTransactions.reduce(
+      (total, transaction) => total + Number(transaction.balance_owed),
+      0
+    ),
+    client_count: new Set(filteredTransactions.map(getClientFilterKey)).size,
+    oldest_days: filteredTransactions.length
+      ? Math.max(...filteredTransactions.map((transaction) => transaction.days_since))
+      : 0,
+  }), [filteredTransactions]);
 
   const handleMarkPaid = (id: string, clientName: string) => {
     setPaidIds(prev => new Set([...prev, id]));
@@ -42,29 +96,79 @@ export default function CollectionsPage() {
       <p className="mb-5" style={{ color: 'var(--t2)' }}>חשבוניות פתוחות, ממתינות לתשלום, ויתרות פרויקט</p>
 
       {/* Summary cards */}
-      {summary && (
+      {data?.summary && (
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
           <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div className="text-xs mb-1" style={{ color: 'var(--t2)' }}>סה"כ לגבייה</div>
-            <div className="text-lg font-extrabold text-yellow-400">₪{Number(summary.total_pending).toLocaleString('he-IL')}</div>
+            <div className="text-lg font-extrabold text-yellow-400">₪{filteredSummary.total_pending.toLocaleString('he-IL')}</div>
           </div>
           <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div className="text-xs mb-1" style={{ color: 'var(--t2)' }}>לקוחות</div>
-            <div className="text-lg font-extrabold">{summary.client_count}</div>
+            <div className="text-lg font-extrabold">{filteredSummary.client_count}</div>
           </div>
           <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div className="text-xs mb-1" style={{ color: 'var(--t2)' }}>הכי ישן</div>
-            <div className={`text-lg font-extrabold ${summary.oldest_days > 30 ? 'text-red-400' : summary.oldest_days > 14 ? 'text-yellow-400' : 'text-white'}`}>
-              {summary.oldest_days} ימים
+            <div className={`text-lg font-extrabold ${filteredSummary.oldest_days > 30 ? 'text-red-400' : filteredSummary.oldest_days > 14 ? 'text-yellow-400' : 'text-white'}`}>
+              {filteredSummary.oldest_days} ימים
             </div>
           </div>
         </div>
       )}
 
+      {!isLoading && visibleTransactions.length > 0 && (
+        <section
+          aria-label="סינון רשומות גבייה לפי לקוח"
+          className="mb-4 flex flex-col gap-3 border-y border-white/10 py-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-blue-400" aria-hidden="true" />
+            <div>
+              <label htmlFor="collections-client-filter" className="block text-sm font-semibold">
+                סינון לפי לקוח
+              </label>
+              <p className="text-xs" style={{ color: 'var(--t2)' }}>
+                מוצגים רק לקוחות שיש להם גבייה פתוחה
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+              <select
+                id="collections-client-filter"
+                value={activeClientKey}
+                onChange={(event) => setSelectedClientKey(event.target.value)}
+                className="h-11 w-full appearance-none rounded-lg border border-white/10 bg-white/[0.04] pe-3 ps-10 text-sm font-semibold text-white transition-colors hover:border-white/20 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#080b14]"
+                aria-describedby="collections-filter-result-count"
+              >
+                <option value={ALL_CLIENTS}>כל הלקוחות ({clientOptions.length})</option>
+                {clientOptions.map((client) => (
+                  <option key={client.key} value={client.key}>
+                    {client.name} ({client.count})
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50"
+                aria-hidden="true"
+              />
+            </div>
+            <span
+              id="collections-filter-result-count"
+              className="whitespace-nowrap text-xs"
+              style={{ color: 'var(--t2)' }}
+              aria-live="polite"
+            >
+              {filteredTransactions.length} {filteredTransactions.length === 1 ? 'רשומה' : 'רשומות'}
+            </span>
+          </div>
+        </section>
+      )}
+
       {/* Transactions list */}
       {isLoading ? (
         <div className="text-center py-10" style={{ color: 'var(--t2)' }}>טוען...</div>
-      ) : transactions.length === 0 ? (
+      ) : visibleTransactions.length === 0 ? (
         <div className="text-center py-10 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
           <div className="text-4xl mb-2">✅</div>
           <p className="text-base font-semibold">אין חשבוניות פתוחות!</p>
@@ -72,7 +176,7 @@ export default function CollectionsPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {transactions.filter((tx: any) => !hiddenIds.has(tx.id)).map((tx: any) => {
+          {filteredTransactions.map((tx) => {
             const isPaid = paidIds.has(tx.id);
             const isPartial = tx.collection_type === 'partial_payment';
             const borderColor = isPaid

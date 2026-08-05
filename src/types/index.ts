@@ -119,6 +119,24 @@ export interface BusinessTransaction {
   clients?: { name: string } | null;
 }
 
+export interface CollectionTransaction extends BusinessTransaction {
+  collection_type: 'pending_invoice' | 'partial_payment';
+  balance_owed: number;
+  days_since: number;
+  client_name: string;
+}
+
+export interface CollectionsSummary {
+  total_pending: number;
+  client_count: number;
+  oldest_days: number;
+}
+
+export interface CollectionsResponse {
+  data: CollectionTransaction[];
+  summary: CollectionsSummary;
+}
+
 export interface PersonalExpense {
   id: string;
   amount: number;

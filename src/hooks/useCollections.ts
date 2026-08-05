@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import type { CollectionsResponse } from '@/types';
 
 export function useCollections() {
   return useQuery({
     queryKey: ['collections'],
-    queryFn: () => api.get('/collections'),
+    queryFn: () => api.get('/collections') as unknown as Promise<CollectionsResponse>,
     staleTime: 0,
   });
 }
