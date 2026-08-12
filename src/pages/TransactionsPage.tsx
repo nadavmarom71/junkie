@@ -1021,6 +1021,7 @@ export default function TransactionsPage() {
   const [categoryFilter, setCategoryFilter] = useState(catParam);
   const [page, setPage]           = useState(1);
   const [createOpen, setCreateOpen] = useState(!!addParam);
+  const [isExporting, setIsExporting] = useState(false);
   const [deleteId, setDeleteId]   = useState<string | null>(null);
   const [deleteTab, setDeleteTab] = useState<'business' | 'personal'>('business');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -1078,6 +1079,49 @@ export default function TransactionsPage() {
     setPage(1);
   }
 
+  async function handleExportCsv() {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams({ tab });
+      if (typeFilter !== 'all') params.set('type', typeFilter);
+      if (categoryFilter) params.set('category', categoryFilter);
+      if (search) params.set('search', search);
+      if (activeMonth) params.set('month', activeMonth);
+      if (activeRange && rangeFrom) params.set('from', rangeFrom);
+      if (activeRange && rangeTo) params.set('to', rangeTo);
+
+      // Keep this same-origin so the httpOnly session cookie is sent reliably.
+      const response = await fetch(`/api/v1/transactions/export.csv?${params.toString()}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(`Export failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      if (blob.size === 0) throw new Error('Export returned an empty file');
+
+      const disposition = response.headers.get('Content-Disposition') || '';
+      const filenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+      const filename = filenameMatch?.[1] || `transactions-${tab}.csv`;
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.style.display = 'none';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast.success(`הייצוא הושלם — ${periodLabel}`);
+    } catch (error) {
+      console.error('[Transactions] CSV export failed', error);
+      toast.error('לא הצלחנו לייצא את העסקאות. נסה שוב.');
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   const transactions = data?.data || [];
   const pagination   = data?.pagination;
   const groups       = groupByDate(transactions);
@@ -1094,26 +1138,12 @@ export default function TransactionsPage() {
         <h1 className="text-xl font-bold">עסקאות</h1>
         <div className="flex gap-2">
           <button
-            onClick={async () => {
-              try {
-                const res = await fetch(
-                  `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/transactions/export.csv?tab=${tab}`,
-                  { credentials: 'include' }
-                );
-                if (!res.ok) throw new Error('Export failed');
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `transactions-${tab}.csv`;
-                a.click();
-                URL.revokeObjectURL(url);
-              } catch { /* ignore */ }
-            }}
-            className="inline-flex items-center gap-1.5 text-sm border border-white/20 rounded-lg px-3 py-1.5 hover:bg-white/5 transition-colors"
+            onClick={handleExportCsv}
+            disabled={isExporting}
+            className="inline-flex items-center gap-1.5 text-sm border border-white/20 rounded-lg px-3 py-1.5 hover:bg-white/5 transition-colors disabled:cursor-wait disabled:opacity-60"
           >
-            <Download className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">ייצוא CSV</span>
+            <Download className={`h-3.5 w-3.5 ${isExporting ? 'animate-pulse' : ''}`} />
+            <span className="hidden sm:inline">{isExporting ? 'מייצא...' : 'ייצוא CSV'}</span>
           </button>
           <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5">
             <Plus className="h-4 w-4" />
