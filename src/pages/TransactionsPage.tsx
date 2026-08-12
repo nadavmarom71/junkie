@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Download, ChevronDown, Pencil, X as XIcon, Search, SlidersHorizontal } from 'lucide-react';
+import { Plus, Download, ChevronDown, Pencil, X as XIcon, Search, SlidersHorizontal, CalendarRange } from 'lucide-react';
 
 interface Installment { amount: string; date: string; unknown: boolean; }
 import { Button } from '@/components/ui/button';
@@ -91,8 +91,44 @@ function formatGroupLabel(dateStr: string): string {
 
 // ── Month Options ─────────────────────────────────────────────────────────────
 
+const DATE_RANGE_VALUE = 'range';
+
+function toDateInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getDateRangePreset(months: number) {
+  const to = new Date();
+  const targetMonthStart = new Date(to.getFullYear(), to.getMonth() - months, 1);
+  const targetMonthLastDay = new Date(
+    targetMonthStart.getFullYear(),
+    targetMonthStart.getMonth() + 1,
+    0
+  ).getDate();
+  const from = new Date(
+    targetMonthStart.getFullYear(),
+    targetMonthStart.getMonth(),
+    Math.min(to.getDate(), targetMonthLastDay)
+  );
+  return { from: toDateInputValue(from), to: toDateInputValue(to) };
+}
+
+function formatDateRangeLabel(from: string, to: string): string {
+  if (!from || !to) return 'טווח תאריכים';
+  const format = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('he-IL', {
+    day: 'numeric', month: 'short', year: '2-digit',
+  });
+  return `${format(from)} – ${format(to)}`;
+}
+
 function buildMonthOptions() {
-  const opts: { label: string; value: string }[] = [{ label: 'כל הזמן', value: 'all' }];
+  const opts: { label: string; value: string }[] = [
+    { label: 'כל הזמן', value: 'all' },
+    { label: 'טווח תאריכים', value: DATE_RANGE_VALUE },
+  ];
   const now = new Date();
   for (let i = 0; i < 18; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -107,11 +143,12 @@ const MONTH_OPTIONS = buildMonthOptions();
 // ── Summary Banner ────────────────────────────────────────────────────────────
 
 function TransactionsSummaryBanner({
-  totals, tab, month, onMonthChange,
+  totals, tab, month, periodLabel, onMonthChange,
 }: {
   totals: { grossRevenue?: number; grossCollected?: number; myNetPocket?: number; outstanding?: number; expenses?: number; net?: number; total?: number; turnover?: number; cashflow?: number };
   tab: 'business' | 'personal';
   month: string;
+  periodLabel: string;
   onMonthChange: (v: string) => void;
 }) {
   const monthSelect = (
@@ -120,7 +157,7 @@ function TransactionsSummaryBanner({
         className="h-auto gap-1 text-sm font-semibold focus:ring-0 focus:ring-offset-0"
         style={{ border: 'none', background: 'transparent', padding: 0, boxShadow: 'none', color: 'var(--t2)' }}
       >
-        <SelectValue />
+        <SelectValue>{periodLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {MONTH_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -970,25 +1007,34 @@ export default function TransactionsPage() {
   const catParam    = searchParams.get('category') || '';
   const typeParam   = (searchParams.get('type') || 'all') as 'income' | 'expense' | 'collection' | 'all';
   const monthParam  = searchParams.get('month') || 'all';
+  const fromParam   = searchParams.get('from') || '';
+  const toParam     = searchParams.get('to') || '';
+  const defaultRange = getDateRangePreset(6);
 
   const [tab, setTab]             = useState<'business' | 'personal'>(tabParam || 'business');
   const [search, setSearch]       = useState('');
   const [typeFilter, setTypeFilter] = useState<'income' | 'expense' | 'collection' | 'all'>(typeParam);
-  const [month, setMonth]         = useState(monthParam);
+  const [month, setMonth]         = useState(fromParam || toParam ? DATE_RANGE_VALUE : monthParam);
+  const [rangeFrom, setRangeFrom] = useState(fromParam || defaultRange.from);
+  const [rangeTo, setRangeTo]     = useState(toParam || defaultRange.to);
+  const [rangePreset, setRangePreset] = useState<3 | 6 | 12 | null>(fromParam || toParam ? null : 6);
   const [categoryFilter, setCategoryFilter] = useState(catParam);
   const [page, setPage]           = useState(1);
   const [createOpen, setCreateOpen] = useState(!!addParam);
   const [deleteId, setDeleteId]   = useState<string | null>(null);
   const [deleteTab, setDeleteTab] = useState<'business' | 'personal'>('business');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [filtersOpen, setFiltersOpen] = useState(!!(catParam || typeParam !== 'all' || monthParam !== 'all'));
+  const [filtersOpen, setFiltersOpen] = useState(!!(catParam || typeParam !== 'all' || monthParam !== 'all' || fromParam || toParam));
 
-  const activeMonth = month === 'all' ? undefined : month;
+  const activeMonth = month === 'all' || month === DATE_RANGE_VALUE ? undefined : month;
+  const activeRange = month === DATE_RANGE_VALUE;
   const filters = {
     tab,
     search: search || undefined,
     type: typeFilter,
     month: activeMonth,
+    from: activeRange ? rangeFrom : undefined,
+    to: activeRange ? rangeTo : undefined,
     category: categoryFilter || undefined,
     page,
   };
@@ -1017,11 +1063,29 @@ export default function TransactionsPage() {
     setTypeFilter('all');
   }
 
+  function handlePeriodChange(value: string) {
+    setMonth(value);
+    setPage(1);
+    if (value === DATE_RANGE_VALUE) setFiltersOpen(true);
+  }
+
+  function applyRangePreset(months: 3 | 6 | 12) {
+    const range = getDateRangePreset(months);
+    setRangeFrom(range.from);
+    setRangeTo(range.to);
+    setRangePreset(months);
+    setMonth(DATE_RANGE_VALUE);
+    setPage(1);
+  }
+
   const transactions = data?.data || [];
   const pagination   = data?.pagination;
   const groups       = groupByDate(transactions);
 
   const hasActiveFilters = !!search || typeFilter !== 'all' || month !== 'all' || !!categoryFilter;
+  const periodLabel = month === DATE_RANGE_VALUE
+    ? formatDateRangeLabel(rangeFrom, rangeTo)
+    : MONTH_OPTIONS.find(option => option.value === month)?.label ?? 'כל הזמן';
 
   return (
     <div className="space-y-4 pb-8">
@@ -1111,11 +1175,11 @@ export default function TransactionsPage() {
       {filtersOpen && (
         <div className="rounded-xl p-3 space-y-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
           <div className="grid grid-cols-2 gap-2">
-            {/* Month */}
+            {/* Period */}
             <div>
-              <label className="text-xs text-white/50 mb-1 block">חודש</label>
-              <Select value={month} onValueChange={v => { setMonth(v); setPage(1); }}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <label className="text-xs text-white/50 mb-1 block">תקופה</label>
+              <Select value={month} onValueChange={handlePeriodChange}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue>{periodLabel}</SelectValue></SelectTrigger>
                 <SelectContent>
                   {MONTH_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                 </SelectContent>
@@ -1134,6 +1198,77 @@ export default function TransactionsPage() {
                     <SelectItem value="collection">גביה</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+            {activeRange && (
+              <div
+                className="col-span-2 rounded-xl p-3"
+                style={{ background: 'rgba(37,99,235,0.07)', border: '1px solid rgba(96,165,250,0.18)' }}
+              >
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-blue-200">
+                    <CalendarRange size={15} aria-hidden="true" />
+                    בחירת טווח
+                  </div>
+                  <div className="flex gap-1.5" aria-label="טווחים מהירים">
+                    {([
+                      { months: 3 as const, label: '3 חודשים' },
+                      { months: 6 as const, label: 'חצי שנה' },
+                      { months: 12 as const, label: 'שנה' },
+                    ]).map(preset => (
+                      <button
+                        key={preset.months}
+                        type="button"
+                        onClick={() => applyRangePreset(preset.months)}
+                        className="h-8 rounded-lg px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70"
+                        style={rangePreset === preset.months ? {
+                          background: 'rgba(37,99,235,0.35)',
+                          border: '1px solid rgba(96,165,250,0.55)',
+                          color: '#dbeafe',
+                        } : {
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          color: 'rgba(255,255,255,0.72)',
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="transactions-range-from" className="mb-1 block text-xs text-white/60">מתאריך</label>
+                    <Input
+                      id="transactions-range-from"
+                      type="date"
+                      value={rangeFrom}
+                      max={rangeTo}
+                      onChange={event => {
+                        setRangeFrom(event.target.value);
+                        setRangePreset(null);
+                        setPage(1);
+                      }}
+                      className="h-10 bg-[#111621] text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="transactions-range-to" className="mb-1 block text-xs text-white/60">עד תאריך</label>
+                    <Input
+                      id="transactions-range-to"
+                      type="date"
+                      value={rangeTo}
+                      min={rangeFrom}
+                      max={toDateInputValue(new Date())}
+                      onChange={event => {
+                        setRangeTo(event.target.value);
+                        setRangePreset(null);
+                        setPage(1);
+                      }}
+                      className="h-10 bg-[#111621] text-sm text-white"
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1166,7 +1301,8 @@ export default function TransactionsPage() {
           totals={data.totals}
           tab={tab}
           month={month}
-          onMonthChange={v => { setMonth(v); setPage(1); }}
+          periodLabel={periodLabel}
+          onMonthChange={handlePeriodChange}
         />
       )}
 
