@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Plus, Download, ChevronDown, Pencil, X as XIcon, Search, SlidersHorizontal, CalendarRange } from 'lucide-react';
 
-interface Installment { amount: string; date: string; unknown: boolean; }
+interface Installment { id?: string; amount: string; date: string; unknown: boolean; }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -242,16 +242,27 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
   const watchedType = watch('type');
   const watchedAmount = watch('amount');
   const isIncome = watchedType === 'income';
-  const balance = projectTotal !== '' && watchedAmount ? Math.max(0, parseFloat(projectTotal) - Number(watchedAmount)) : 0;
+  const dealTotal = projectTotal !== '' ? parseFloat(projectTotal) : Number(watchedAmount || 0);
+  const balance = isIncome
+    ? Math.max(0, paymentStatus === 'paid' ? dealTotal - Number(watchedAmount || 0) : dealTotal)
+    : 0;
   const scheduledTotal = installments.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
 
   function addInstallment() {
     const remaining = Math.max(0, balance - scheduledTotal);
-    setInstallments(prev => [...prev, { amount: remaining > 0 ? String(remaining) : '', date: '', unknown: false }]);
+    setInstallments(prev => [...prev, { id: crypto.randomUUID(), amount: remaining > 0 ? String(remaining) : '', date: '', unknown: true }]);
   }
   function removeInstallment(idx: number) { setInstallments(prev => prev.filter((_, i) => i !== idx)); }
   function updateInstallment(idx: number, patch: Partial<Installment>) {
     setInstallments(prev => prev.map((inst, i) => i === idx ? { ...inst, ...patch } : inst));
+  }
+  function applyPaymentPreset(firstPercent: 25 | 50) {
+    if (!dealTotal || dealTotal <= 0) return toast.error('קודם צריך להזין את שווי העסקה');
+    const first = Math.round(dealTotal * firstPercent) / 100;
+    setInstallments([
+      { id: crypto.randomUUID(), amount: String(first), date: expectedDate, unknown: !expectedDate },
+      { id: crypto.randomUUID(), amount: String(Math.round((dealTotal - first) * 100) / 100), date: '', unknown: true },
+    ]);
   }
 
   async function handleCreateNewClient() {
@@ -269,8 +280,16 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
     const typedValues = values as BusinessForm;
     try {
       const schedule = installments.length > 0
-        ? installments.map(i => ({ amount: parseFloat(i.amount) || 0, date: i.unknown ? null : (i.date || null), unknown: i.unknown }))
+        ? installments.map(i => ({ id: i.id || crypto.randomUUID(), amount: parseFloat(i.amount) || 0, date: i.unknown ? null : (i.date || null), unknown: i.unknown }))
         : null;
+      if (schedule && Math.abs(schedule.reduce((sum, item) => sum + item.amount, 0) - balance) > 0.009) {
+        toast.error(`לוח התשלומים צריך להסתכם ביתרה של ₪${balance.toLocaleString('he-IL')}`);
+        return;
+      }
+      if (schedule?.some(item => !item.unknown && !item.date)) {
+        toast.error('לכל פעימה צריך תאריך או סימון שהתאריך עדיין לא ידוע');
+        return;
+      }
       const createData = {
         ...typedValues,
         client_id: selectedClientId || null,
@@ -303,7 +322,7 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
           </Select>
         </div>
         <div>
-          <label className="text-sm font-medium">סכום (₪)</label>
+          <label className="text-sm font-medium">{isIncome ? (paymentStatus === 'paid' ? 'כמה נכנס בפועל (₪)' : 'שווי העסקה (₪)') : 'סכום (₪)'}</label>
           <Input type="number" step="0.01" className="mt-1" {...register('amount')} />
           {errors.amount && <p className="text-xs text-red-500 mt-0.5">{errors.amount.message}</p>}
         </div>
@@ -354,7 +373,7 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
           {errors.category && <p className="text-xs text-red-500 mt-0.5">{errors.category.message}</p>}
         </div>
         <div>
-          <label className="text-sm font-medium">תאריך</label>
+          <label className="text-sm font-medium">{isIncome ? 'מתי העסקה נסגרה' : 'תאריך'}</label>
           <Input type="date" className="mt-1" {...register('date')} />
         </div>
       </div>
@@ -399,7 +418,7 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
               )}
             </div>
             <div>
-              <label className="text-sm font-medium">סה״כ פרויקט (₪)</label>
+              <label className="text-sm font-medium">שווי מלא של הפרויקט (₪)</label>
               <Input type="number" min="0" step="0.01" className="mt-1" placeholder="לדוגמה: 15000"
                 value={projectTotal} onChange={e => setProjectTotal(e.target.value)} />
               {balance > 0 && <p className="text-xs text-yellow-400 mt-0.5 font-semibold">יתרה לגביה: ₪{balance.toLocaleString('he-IL')}</p>}
@@ -408,13 +427,19 @@ function BusinessTransactionForm({ onClose, defaultType }: { onClose: () => void
           {balance > 0 && (
             <div className="pt-1 space-y-2" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-yellow-400/80">תזמון תשלומים</p>
+                <p className="text-xs font-semibold text-yellow-400/80">מתי הכסף אמור להיכנס?</p>
                 {scheduledTotal > 0 && (
                   <p className={`text-xs font-semibold ${scheduledTotal >= balance ? 'text-green-400' : 'text-yellow-400'}`}>
                     {scheduledTotal >= balance ? '✓' : ''} מתוזמן: ₪{scheduledTotal.toLocaleString('he-IL')} / ₪{balance.toLocaleString('he-IL')}
                   </p>
                 )}
               </div>
+              {paymentStatus === 'pending' && installments.length === 0 && (
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => applyPaymentPreset(25)} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/5">25% מקדמה · 75% בהמשך</button>
+                  <button type="button" onClick={() => applyPaymentPreset(50)} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/5">50% עכשיו · 50% בהמשך</button>
+                </div>
+              )}
               {installments.map((inst, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <Input type="number" min="0" step="0.01" className="h-8 text-sm w-24 flex-shrink-0" placeholder="₪ סכום"
@@ -520,11 +545,11 @@ function EditTransactionDialog({ tx, onClose }: { tx: BusinessTransaction; onClo
   const [projectTotal, setProjectTotal] = useState(tx.project_total != null ? String(tx.project_total) : '');
   const [installments, setInstallments] = useState<Installment[]>(() => {
     if (tx.payment_schedule && tx.payment_schedule.length > 0) {
-      return tx.payment_schedule.map(s => ({ amount: String(s.amount), date: s.date ?? '', unknown: s.unknown }));
+      return tx.payment_schedule.map(s => ({ id: s.id, amount: String(s.amount), date: s.date ?? '', unknown: s.unknown }));
     }
     if (tx.expected_payment_date || tx.expected_date_unknown) {
       const bal = tx.project_total ? Math.max(0, Number(tx.project_total) - Number(tx.amount)) : Number(tx.amount);
-      return [{ amount: String(bal), date: tx.expected_payment_date ?? '', unknown: tx.expected_date_unknown ?? false }];
+      return [{ id: crypto.randomUUID(), amount: String(bal), date: tx.expected_payment_date ?? '', unknown: tx.expected_date_unknown ?? false }];
     }
     return [];
   });
@@ -535,12 +560,13 @@ function EditTransactionDialog({ tx, onClose }: { tx: BusinessTransaction; onClo
   });
 
   const watchedAmount = watch('amount');
-  const balance = projectTotal !== '' && watchedAmount ? Math.max(0, parseFloat(projectTotal) - Number(watchedAmount)) : 0;
+  const dealTotal = projectTotal !== '' ? parseFloat(projectTotal) : Number(watchedAmount || 0);
+  const balance = isIncome ? Math.max(0, tx.payment_status === 'paid' ? dealTotal - Number(watchedAmount || 0) : dealTotal) : 0;
   const scheduledTotal = installments.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
 
   function addInstallment() {
     const remaining = Math.max(0, balance - scheduledTotal);
-    setInstallments(prev => [...prev, { amount: remaining > 0 ? String(remaining) : '', date: '', unknown: false }]);
+    setInstallments(prev => [...prev, { id: crypto.randomUUID(), amount: remaining > 0 ? String(remaining) : '', date: '', unknown: true }]);
   }
   function removeInstallment(idx: number) { setInstallments(prev => prev.filter((_, i) => i !== idx)); }
   function updateInstallment(idx: number, patch: Partial<Installment>) {
@@ -562,8 +588,12 @@ function EditTransactionDialog({ tx, onClose }: { tx: BusinessTransaction; onClo
     const typed = values as BusinessForm;
     try {
       const schedule = installments.length > 0
-        ? installments.map(i => ({ amount: parseFloat(i.amount) || 0, date: i.unknown ? null : (i.date || null), unknown: i.unknown }))
+        ? installments.map(i => ({ id: i.id || crypto.randomUUID(), amount: parseFloat(i.amount) || 0, date: i.unknown ? null : (i.date || null), unknown: i.unknown }))
         : null;
+      if (schedule && Math.abs(schedule.reduce((sum, item) => sum + item.amount, 0) - balance) > 0.009) {
+        toast.error(`לוח התשלומים צריך להסתכם ביתרה של ₪${balance.toLocaleString('he-IL')}`);return;
+      }
+      if (schedule?.some(item => !item.unknown && !item.date)) { toast.error('לכל פעימה צריך תאריך או סימון שהתאריך עדיין לא ידוע');return; }
       const updateData = {
         ...typed, client_id: selectedClientId || null,
         ...(isIncome && {

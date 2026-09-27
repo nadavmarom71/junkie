@@ -18,6 +18,7 @@ const QUICK_ACTIONS = [
 
 /* ─── "More" sheet items ─── */
 const MORE_ITEMS = [
+  { to: '/finance',     icon: LayoutDashboard, label: 'התמונה שלי',  accent: '#66ac90' },
   { to: '/insights',    icon: Lightbulb,    label: 'תובנות AI',    accent: undefined },
   { to: '/accounts',    icon: Building2,    label: 'חשבונות',      accent: '#3b82f6' },
   { to: '/clients',     icon: Users,        label: 'לקוחות',       accent: undefined },

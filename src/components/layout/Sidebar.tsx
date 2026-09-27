@@ -1,12 +1,13 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, ArrowLeftRight, Lightbulb, Users,
+  LayoutDashboard, ArrowLeftRight, Lightbulb, Users, Wallet,
   TrendingUp, FileText, Repeat, Settings, X, Banknote, Users2, Target, Inbox, Sparkles, Building2,
 } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { cn } from '@/lib/utils';
 
 const navItems = [
+  { to: '/finance',      icon: Wallet,          label: 'התמונה הפיננסית', accent: '#66ac90' },
   { to: '/',             icon: LayoutDashboard, label: 'לוח מחוונים',    accent: undefined },
   { to: '/transactions', icon: ArrowLeftRight,   label: 'עסקאות',        accent: undefined },
   { to: '/collections',  icon: Banknote,         label: 'גבייה',         accent: undefined },

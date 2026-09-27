@@ -5,10 +5,13 @@ import axios from 'axios';
 // Vite proxies /api to localhost:3001 (see vite.config.ts). This keeps the
 // session cookie first-party so mobile browsers (which block third-party
 // cookies) accept it. Do NOT point this at the cross-origin backend URL.
+const localApiKey = import.meta.env.DEV ? import.meta.env.VITE_API_KEY : undefined;
+
 const apiClient = axios.create({
   baseURL: '/api/v1',
   headers: {
     'Content-Type': 'application/json',
+    ...(localApiKey ? { 'x-api-key': localApiKey } : {}),
   },
   withCredentials: true, // send httpOnly session cookie on every request
   timeout: 20000,

@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import LoginPage from '@/pages/LoginPage';
@@ -19,13 +19,17 @@ import PartnershipPage from '@/pages/PartnershipPage';
 import ReceiptsInboxPage from '@/pages/ReceiptsInboxPage';
 import AccountsPage from '@/pages/AccountsPage';
 import Onboarding from '@/pages/Onboarding';
+import FinancePage from '@/pages/FinancePage';
+import '@/pages/login.css';
 
 const router = createBrowserRouter([
+  { path: '/finance', element: <FinancePage /> },
   {
     path: '/',
     element: <AppLayout />,
     children: [
-      { index: true, element: <DashboardPage /> },
+      { index: true, element: <Navigate replace to="/finance" /> },
+      { path: 'legacy', element: <DashboardPage /> },
       { path: 'transactions', element: <TransactionsPage /> },
       { path: 'insights', element: <InsightsPage /> },
       { path: 'clients', element: <ClientsPage /> },
@@ -50,8 +54,8 @@ export default function App() {
 
   if (loading) {
     return (
-      <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#080B14' }}>
-        <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', fontFamily: 'Arial, sans-serif' }}>Loading...</div>
+      <div className="junkie-auth-shell" dir="rtl">
+        <div className="junkie-auth-loading"><span>j.</span><p>פותח את התמונה הפיננסית שלך…</p></div>
       </div>
     );
   }

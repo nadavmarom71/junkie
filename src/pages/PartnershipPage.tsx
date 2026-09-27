@@ -5,6 +5,7 @@ import Dashboard from '@/modules/partnership/Dashboard';
 import AddTransaction from '@/modules/partnership/AddTransaction';
 import History from '@/modules/partnership/History';
 import SettingsView from '@/modules/partnership/Settings';
+import { Link } from 'react-router-dom';
 
 // ── Internal tab definition ───────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ function Header() {
       </div>
       <div>
         <div className="text-lg font-extrabold text-white leading-tight">השותפות שלך</div>
-        <div className="text-sm text-white/40 mt-0.5">נדב 65% · דוד 35%</div>
+        <div className="text-sm text-white/60 mt-0.5">החלוקה לפי הכלל שנשמר בכל עסקה</div>
       </div>
       {/* Live indicator */}
       <div className="ms-auto flex items-center gap-1.5">
@@ -104,7 +105,7 @@ function Header() {
 
 function PartnershipContent() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const { isLoading } = usePartnership();
+  const { isLoading, loadError, saveError, pendingRecurring, approveRecurring } = usePartnership();
 
   function handleNavigate(tab: string) {
     setActiveTab(tab as Tab);
@@ -122,9 +123,16 @@ function PartnershipContent() {
     );
   }
 
+  if (loadError) {
+    return <><Header /><div role="alert" className="rounded-2xl border border-red-400/30 bg-red-400/10 p-5 text-red-100"><h2 className="font-bold">נתוני השותפות לא נטענו</h2><p className="mt-2">{loadError}</p><p className="mt-2">העריכה נעולה כדי שלא נדרוס את המידע הקיים.</p><button className="mt-4 rounded-xl bg-white/10 px-4 py-2" onClick={() => window.location.reload()}>לנסות לטעון שוב</button></div></>;
+  }
+
   return (
     <>
       <Header />
+      <Link to="/finance?view=partnership" className="mb-4 block rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-3 text-sm text-emerald-100">פירוט החוב לדוד, בדיקת כללים ושיוך תשלומים ←</Link>
+      {saveError && <div role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-100">{saveError} השינוי לא אושר כשמור בשרת.</div>}
+      {pendingRecurring.length > 0 && <details className="mb-4 rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm"><summary className="cursor-pointer font-semibold text-amber-100">{pendingRecurring.length} חיובים חוזרים מחכים לבדיקה</summary><p className="mt-3 text-white/70">המועד הגיע, אבל זה לא אומר ששולם. רק לאחר בדיקה אפשר לרשום את התשלום בשותפות.</p>{pendingRecurring.map(item => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 py-3"><span>{item.description}<small className="block text-white/60">{item.date} · {new Intl.NumberFormat('he-IL', {style:'currency',currency:'ILS'}).format(item.amount)}</small></span><button className="rounded-lg bg-white/10 px-3 py-2 font-semibold" onClick={() => {if(window.confirm(`בדקת שהתשלום ״${item.description}״ אכן בוצע ושלא נרשם כבר? האישור יוסיף רשומה אמיתית לשותפות.`)) approveRecurring(item.id);}}>בדקתי ושולם — לרשום</button></div>)}</details>}
       <TabBar active={activeTab} onChange={setActiveTab} />
 
       <div key={activeTab}>

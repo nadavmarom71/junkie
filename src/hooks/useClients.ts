@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import type { Client, CreateClientInput, ClientProfitability } from '@/types';
+import type { BusinessTransaction, Client, CreateClientInput, ClientProfitability, Retainer } from '@/types';
 
 export const CLIENTS_KEY = 'clients';
 
@@ -12,7 +12,7 @@ export function useClients(sort?: string) {
 }
 
 export function useClient(id: string) {
-  return useQuery<Client & { transactions: unknown[]; retainers: unknown[] }>({
+  return useQuery<Client & { transactions: BusinessTransaction[]; retainers: Retainer[] }>({
     queryKey: [CLIENTS_KEY, id],
     queryFn: () => api.get(`/clients/${id}`),
     enabled: !!id,
@@ -23,7 +23,7 @@ export function useCreateClient() {
   const qc = useQueryClient();
   return useMutation<Client, Error, CreateClientInput>({
     mutationFn: (data) => api.post('/clients', data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [CLIENTS_KEY] }),
+    onSuccess: () => {qc.invalidateQueries({ queryKey: [CLIENTS_KEY] });qc.invalidateQueries({ queryKey: ['finance'] });},
   });
 }
 
@@ -43,11 +43,11 @@ export function useDeleteClient() {
   });
 }
 
-export function useClientProfitability(id: string) {
+export function useClientProfitability(id: string, enabled = true) {
   return useQuery<ClientProfitability>({
     queryKey: [CLIENTS_KEY, id, 'profitability'],
     queryFn: () => api.get(`/clients/${id}/profitability`),
-    enabled: !!id,
+    enabled: !!id && enabled,
   });
 }
 

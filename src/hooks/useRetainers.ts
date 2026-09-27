@@ -8,8 +8,11 @@ interface RetainersResponse {
   retainers: Retainer[];
   summary: {
     active_count: number;
-    monthly_total: number;
-    annual_projection: number;
+    monthly_total: number | null;
+    annual_projection: number | null;
+    currency: 'ILS';
+    other_currency_count: number;
+    basis: 'contract_average_not_collected_cash';
   };
 }
 
@@ -35,6 +38,7 @@ export function useCreateRetainer() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [RETAINERS_KEY] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['finance'] });
     },
   });
 }
@@ -46,6 +50,7 @@ export function useUpdateRetainer() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [RETAINERS_KEY] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['finance'] });
     },
   });
 }
@@ -57,6 +62,7 @@ export function useDeleteRetainer() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [RETAINERS_KEY] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['finance'] });
     },
   });
 }

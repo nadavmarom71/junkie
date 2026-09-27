@@ -14,6 +14,7 @@ const authApi = axios.create({
 interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
+  localAccess: boolean;
   login: (password: string) => Promise<boolean>;
   logout: () => Promise<void>;
 }
@@ -21,17 +22,22 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // Local Junkie is a single-user app. In development, the existing local API
+  // key authenticates this browser without repeatedly asking for a password.
+  // Production keeps the normal httpOnly-cookie login.
+  const localAccess = import.meta.env.DEV && Boolean(import.meta.env.VITE_API_KEY);
+  const [isAuthenticated, setIsAuthenticated] = useState(localAccess);
+  const [loading, setLoading] = useState(!localAccess);
 
   // Check existing session cookie on mount
   useEffect(() => {
+    if (localAccess) return;
     authApi
       .get('/api/v1/auth/status')
       .then((res) => setIsAuthenticated(res.data?.authenticated === true))
       .catch(() => setIsAuthenticated(false))
       .finally(() => setLoading(false));
-  }, []);
+  }, [localAccess]);
 
   const login = async (password: string): Promise<boolean> => {
     try {
@@ -50,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    if (localAccess) return;
     try {
       await authApi.post('/api/v1/auth/logout');
     } catch {
@@ -59,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, loading, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, loading, localAccess, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useCollections, useRemindCollection, useMarkCollectionPaid } from '@/hooks/useCollections';
 import { formatDateShort } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { Filter } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { CollectionTransaction, CollectionsSummary } from '@/types';
 
 const ALL_CLIENTS = 'all';
@@ -19,7 +20,11 @@ export default function CollectionsPage() {
   const remind = useRemindCollection();
   const markPaid = useMarkCollectionPaid();
   const [remindedIds, setRemindedIds] = useState<Set<string>>(new Set());
-  const [paidIds, setPaidIds] = useState<Set<string>>(new Set());
+  const [receiptDeal, setReceiptDeal] = useState<CollectionTransaction | null>(null);
+  const [receiptAmount, setReceiptAmount] = useState('');
+  const [receiptDate, setReceiptDate] = useState('');
+  const [receiptDocument, setReceiptDocument] = useState('');
+  const [receiptKey, setReceiptKey] = useState<string | null>(null);
   const [selectedClientKey, setSelectedClientKey] = useState(ALL_CLIENTS);
 
   const transactions = useMemo(() => data?.data ?? [], [data?.data]);
@@ -66,7 +71,7 @@ export default function CollectionsPage() {
   );
 
   const filteredSummary = useMemo<CollectionsSummary>(() => ({
-    total_pending: filteredTransactions.reduce(
+    total_pending: filteredTransactions.some(transaction=>transaction.reconciliation_issue) ? null : filteredTransactions.reduce(
       (total, transaction) => total + Number(transaction.balance_owed),
       0
     ),
@@ -76,18 +81,34 @@ export default function CollectionsPage() {
       : 0,
   }), [filteredTransactions]);
 
-  const handleMarkPaid = (id: string, clientName: string) => {
-    setPaidIds(prev => new Set([...prev, id]));
-    markPaid.mutate(id, {
-      onSuccess: () => {
-        toast.success(`${clientName} סומן כשולם`);
-        // After 1.5s animation, hide the item from the list
-        setTimeout(() => setHiddenIds(prev => new Set([...prev, id])), 1500);
+  const openReceipt = (deal: CollectionTransaction) => {
+    setReceiptDeal(deal);
+    setReceiptAmount('');
+    setReceiptDate(new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()));
+    setReceiptDocument('');
+    setReceiptKey(crypto.randomUUID());
+  };
+
+  const recordReceipt = (event: FormEvent) => {
+    event.preventDefault();
+    if (!receiptDeal || receiptDeal.balance_owed == null || receiptDeal.reconciliation_issue || markPaid.isPending) return;
+    const amount=Number(receiptAmount);
+    if (!Number.isFinite(amount) || amount<=0 || amount>Number(receiptDeal.balance_owed)) {
+      toast.error('יש להזין את הסכום שהתקבל בפועל, עד גובה היתרה');
+      return;
+    }
+    const parsedDate=Date.parse(receiptDate);
+    const dateValid=/^\d{4}-\d{2}-\d{2}$/.test(receiptDate) && Number.isFinite(parsedDate) && new Date(parsedDate).toISOString().slice(0,10)===receiptDate;
+    if (!dateValid) {toast.error('יש לבחור תאריך תקבול תקין');return;}
+    const key=receiptKey || crypto.randomUUID();
+    setReceiptKey(key);
+    markPaid.mutate({id:receiptDeal.id,amount,date:receiptDate,idempotency_key:key,document_link:receiptDocument.trim()||null},{
+      onSuccess: result => {
+        toast.success(result.skipped==='duplicate'?'התקבול הזה כבר נקלט':result.skipped==='already_collected'?'העסקה כבר נגבתה':`נקלט תקבול של ₪${amount.toLocaleString('he-IL')}${result.remaining ? ` · נשאר לגבייה ₪${result.remaining.toLocaleString('he-IL')}` : ' · היתרה נסגרה'}`);
+        if (result.remaining===0 || result.skipped==='already_collected') setHiddenIds(prev => new Set([...prev, receiptDeal.id]));
+        setReceiptDeal(null);
       },
-      onError: () => {
-        setPaidIds(prev => { const next = new Set(prev); next.delete(id); return next; });
-        toast.error('שגיאה בעדכון סטטוס תשלום');
-      },
+      onError: () => toast.error('לא ברור אם התקבול נשמר. בדוק את רשימת הגבייה לפני ניסיון חוזר; אותו מזהה ניסיון נשמר בחלונית.'),
     });
   };
 
@@ -101,7 +122,7 @@ export default function CollectionsPage() {
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
           <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div className="text-xs mb-1" style={{ color: 'var(--t2)' }}>סה"כ לגבייה</div>
-            <div className="text-lg font-extrabold text-yellow-400">₪{filteredSummary.total_pending.toLocaleString('he-IL')}</div>
+            <div className="text-lg font-extrabold text-yellow-400">{filteredSummary.total_pending == null ? 'צריך בדיקה' : `₪${filteredSummary.total_pending.toLocaleString('he-IL')}`}</div>
           </div>
           <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div className="text-xs mb-1" style={{ color: 'var(--t2)' }}>לקוחות</div>
@@ -194,11 +215,8 @@ export default function CollectionsPage() {
       ) : (
         <div className="space-y-2">
           {filteredTransactions.map((tx) => {
-            const isPaid = paidIds.has(tx.id);
             const isPartial = tx.collection_type === 'partial_payment';
-            const borderColor = isPaid
-              ? 'rgba(0,196,140,0.3)'
-              : tx.payment_status === 'overdue'
+            const borderColor = tx.payment_status === 'overdue'
               ? 'rgba(239,68,68,0.3)'
               : isPartial ? 'rgba(234,179,8,0.2)' : 'rgba(255,255,255,0.08)';
 
@@ -207,9 +225,8 @@ export default function CollectionsPage() {
                 key={tx.id}
                 className="rounded-xl px-4 py-3 transition-all duration-500"
                 style={{
-                  background: isPaid ? 'rgba(0,196,140,0.06)' : 'rgba(255,255,255,0.03)',
+                  background: 'rgba(255,255,255,0.03)',
                   border: `1px solid ${borderColor}`,
-                  opacity: isPaid ? 0.6 : 1,
                 }}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -217,11 +234,7 @@ export default function CollectionsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-semibold">{tx.client_name}</span>
-                      {isPaid ? (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-green-500/20 text-green-300 border border-green-500/30">
-                          שולם
-                        </span>
-                      ) : isPartial ? (
+                      {isPartial ? (
                         <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-yellow-500/15 text-yellow-300 border border-yellow-500/25">
                           יתרת פרויקט
                         </span>
@@ -250,8 +263,14 @@ export default function CollectionsPage() {
                         </span>
                       )}
 
-                      {tx.expected_date_unknown ? (
+                      {tx.reconciliation_issue ? (
+                        <span className="text-xs text-yellow-400/80">ייתכן שתקבול ידני ותנועת בנק הם אותו תשלום — צריך לבדוק התאמה</span>
+                      ) : tx.schedule_issue ? (
+                        <span className="text-xs text-yellow-400/80">לוח התשלומים לא תואם ליתרה — צריך לבדוק את הפעימות</span>
+                      ) : tx.expected_date_unknown ? (
                         <span className="text-xs text-yellow-400/60">תאריך לא ידוע</span>
+                      ) : tx.next_payment ? (
+                        <span className="text-xs text-blue-400/80">הפעימה הבאה: ₪{Number(tx.next_payment.amount).toLocaleString('he-IL')}{tx.next_payment.date ? ` · ${tx.next_payment.date}` : ' · עדיין בלי תאריך'}</span>
                       ) : tx.expected_payment_date ? (
                         <span className="text-xs text-blue-400/80">צפוי: {tx.expected_payment_date}</span>
                       ) : null}
@@ -262,25 +281,22 @@ export default function CollectionsPage() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="text-left">
                       <div className="text-base font-extrabold text-yellow-400">
-                        ₪{Number(tx.balance_owed).toLocaleString('he-IL')}
+                        {tx.balance_owed == null ? 'צריך בדיקה' : `₪${tx.balance_owed.toLocaleString('he-IL')}`}
                       </div>
                       <div className="text-xs text-white/30">יתרה</div>
                     </div>
                     <button
-                      onClick={() => handleMarkPaid(tx.id, tx.client_name)}
-                      disabled={isPaid}
-                      className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                        isPaid
-                          ? 'bg-green-500/30 text-green-300'
-                          : 'bg-green-500/20 text-green-300 hover:bg-green-500/30'
-                      }`}
+                      onClick={() => openReceipt(tx)}
+                      disabled={markPaid.isPending || tx.balance_owed == null || !!tx.reconciliation_issue}
+                      className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all bg-green-500/20 text-green-300 hover:bg-green-500/30 disabled:opacity-40"
                     >
-                      {isPaid ? '✓ שולם' : 'שולם'}
+                      תשלום התקבל
                     </button>
                     <button
                       onClick={() => handleRemind(tx.id)}
-                      disabled={remindedIds.has(tx.id) || remind.isPending}
-                      className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                      disabled={!!tx.schedule_issue || !!tx.reconciliation_issue || remindedIds.has(tx.id) || remind.isPending}
+                      title={tx.reconciliation_issue ? 'קודם צריך לבדוק את ההתאמה בין הבנק לתקבול' : tx.schedule_issue ? 'קודם צריך לבדוק את לוח התשלומים' : undefined}
+                      className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                         remindedIds.has(tx.id)
                           ? 'bg-green-500/20 text-green-300'
                           : 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
@@ -295,6 +311,29 @@ export default function CollectionsPage() {
           })}
         </div>
       )}
+      <Dialog open={!!receiptDeal} onOpenChange={open => {if(!open && !markPaid.isPending)setReceiptDeal(null);}}>
+        <DialogContent dir="rtl" className="text-white">
+          <DialogHeader className="text-right">
+            <DialogTitle>איזה תשלום באמת התקבל?</DialogTitle>
+            <DialogDescription>העסקה לא נסגרת אוטומטית. נרשום רק את הסכום ואת יום הכניסה שבחרת.</DialogDescription>
+          </DialogHeader>
+          {receiptDeal && <form onSubmit={recordReceipt} className="flex flex-col gap-4">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm"><strong>{receiptDeal.client_name}</strong><p className="mt-1 text-white/70">יתרה לגבייה לפני הרישום: ₪{Number(receiptDeal.balance_owed).toLocaleString('he-IL')}</p></div>
+            <label className="flex flex-col gap-2 text-sm font-semibold">הסכום שנכנס בפועל
+              <input aria-label="הסכום שנכנס בפועל" type="number" min="0.01" max={receiptDeal.balance_owed ?? undefined} step="0.01" required value={receiptAmount} onChange={event => setReceiptAmount(event.target.value)} disabled={markPaid.isPending} className="h-11 rounded-lg border border-white/20 bg-[#161c29] px-3 text-white" />
+            </label>
+            <label className="flex flex-col gap-2 text-sm font-semibold">תאריך כניסת הכסף
+              <input aria-label="תאריך כניסת הכסף" type="date" required value={receiptDate} onChange={event => setReceiptDate(event.target.value)} disabled={markPaid.isPending} className="h-11 rounded-lg border border-white/20 bg-[#161c29] px-3 text-white" />
+            </label>
+            <label className="flex flex-col gap-2 text-sm font-semibold">קישור לקבלה ב־SUMIT, אם יש
+              <input aria-label="קישור לקבלה ב־SUMIT" type="url" placeholder="https://..." value={receiptDocument} onChange={event => setReceiptDocument(event.target.value)} disabled={markPaid.isPending} className="h-11 rounded-lg border border-white/20 bg-[#161c29] px-3 text-white placeholder:text-white/40" />
+            </label>
+            {Number(receiptAmount)>0 && Number(receiptAmount)<=Number(receiptDeal.balance_owed) && <p className="text-sm text-white/80">אחרי הרישום יישאר לגבייה: ₪{(Number(receiptDeal.balance_owed)-Number(receiptAmount)).toLocaleString('he-IL', {maximumFractionDigits:2})}</p>}
+            <p className="text-xs text-white/60">האישור ייצור רשומת תקבול נפרדת ויעדכן את יתרת הגבייה. הוא לא משנה את סכום העסקה המקורית ולא מוכיח לבדו התאמה לתנועת בנק.</p>
+            <DialogFooter className="gap-2"><button type="button" onClick={() => setReceiptDeal(null)} disabled={markPaid.isPending} className="rounded-lg border border-white/20 px-4 py-2 text-sm">ביטול</button><button type="submit" disabled={markPaid.isPending || !receiptAmount} className="rounded-lg bg-green-500/25 px-4 py-2 text-sm font-semibold text-green-200 disabled:opacity-40">{markPaid.isPending?'שומר תקבול…':'אישור ורישום התקבול'}</button></DialogFooter>
+          </form>}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

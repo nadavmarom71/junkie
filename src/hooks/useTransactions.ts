@@ -24,13 +24,14 @@ export interface TransactionFilters {
   order?: 'asc' | 'desc';
 }
 
-export function useTransactions(filters: TransactionFilters = {}) {
+export function useTransactions(filters: TransactionFilters = {}, enabled = true) {
   return useQuery<PaginatedResponse<BusinessTransaction | PersonalExpense>>({
     queryKey: [TRANSACTIONS_KEY, filters],
     queryFn: () =>
       api.get('/transactions', {
         params: { ...filters, page: filters.page || 1, limit: filters.limit || 25 },
       }),
+    enabled,
   });
 }
 
@@ -47,6 +48,7 @@ function invalidateDashboard(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: [TRANSACTIONS_KEY] });
   qc.invalidateQueries({ queryKey: ['categories'] });
   qc.invalidateQueries({ queryKey: ['collections'] });
+  qc.invalidateQueries({ queryKey: ['finance'] });
 }
 
 export function useCreateTransaction() {
@@ -115,6 +117,7 @@ export function useUpdatePaymentStatus() {
       qc.invalidateQueries({ queryKey: ['dashboard'] });
       qc.invalidateQueries({ queryKey: ['collections'] });
       qc.invalidateQueries({ queryKey: ['categories'] });
+      qc.invalidateQueries({ queryKey: ['finance'] });
     },
   });
 }

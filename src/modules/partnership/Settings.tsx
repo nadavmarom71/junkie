@@ -50,7 +50,7 @@ export default function Settings() {
         style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.08)' }}
       >
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-white">רזרבת מס</span>
+          <span className="text-sm font-bold text-white">רזרבת ביטוח לאומי/בריאות</span>
           <span
             className="text-lg font-extrabold text-yellow-400"
           >

@@ -214,7 +214,7 @@ export default function RetainersPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <Card>
             <CardContent className="pt-5 text-center">
-              <p className="text-2xl font-bold text-green-400">{formatCurrency(summary.monthly_total)}</p>
+              <p className="text-2xl font-bold text-green-400">{summary.monthly_total == null ? 'לא ידוע' : formatCurrency(summary.monthly_total)}</p>
               <p className="text-xs text-white/50 mt-1">הכנסה חודשית</p>
             </CardContent>
           </Card>
@@ -226,7 +226,7 @@ export default function RetainersPage() {
           </Card>
           <Card>
             <CardContent className="pt-5 text-center">
-              <p className="text-2xl font-bold text-blue-400">{formatCurrency(summary.annual_projection)}</p>
+              <p className="text-2xl font-bold text-blue-400">{summary.annual_projection == null ? 'לא ידוע' : formatCurrency(summary.annual_projection)}</p>
               <p className="text-xs text-white/50 mt-1">תחזית שנתית</p>
             </CardContent>
           </Card>

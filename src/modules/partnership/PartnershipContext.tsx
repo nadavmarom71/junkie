@@ -6,6 +6,7 @@
 import { createContext, useContext, useReducer, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import api from '@/lib/api';
+import { toast } from 'sonner';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -221,7 +222,7 @@ function reducer(state: PartnershipState, action: Action): PartnershipState {
               description: p.description,
               amount: p.amount,
               date: p.date,
-              breakdown: calcIncomeBreakdown(p.amount, state.settings, linked),
+              breakdown: calcIncomeBreakdown(p.amount, state.settings, linked, tx.splitOverride),
             };
           } else {
             const b = tx.breakdown as ExpenseBreakdown;
@@ -253,7 +254,7 @@ function reducer(state: PartnershipState, action: Action): PartnershipState {
           return {
             ...tx,
             linkedExpenses: linked,
-            breakdown: calcIncomeBreakdown(tx.amount, state.settings, linked),
+            breakdown: calcIncomeBreakdown(tx.amount, state.settings, linked, tx.splitOverride),
           };
         }),
       };
@@ -269,7 +270,7 @@ function reducer(state: PartnershipState, action: Action): PartnershipState {
           return {
             ...tx,
             linkedExpenses: linked,
-            breakdown: calcIncomeBreakdown(tx.amount, state.settings, linked),
+            breakdown: calcIncomeBreakdown(tx.amount, state.settings, linked, tx.splitOverride),
           };
         }),
       };
@@ -303,6 +304,10 @@ interface PartnershipContextValue {
   computed: ComputedValues;
   computedForMonth: (month: string | 'all') => ComputedValues;
   isLoading: boolean;
+  loadError: string | null;
+  saveError: string | null;
+  pendingRecurring: PartnershipTx[];
+  approveRecurring: (id: string) => void;
 }
 
 const PartnershipContext = createContext<PartnershipContextValue | null>(null);
@@ -314,40 +319,34 @@ const STORAGE_KEY = 'partnership-module-v1';
 export function PartnershipProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, EMPTY_STATE);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedRef = useRef('');
+  const revisionRef = useRef<string | undefined>(undefined);
+  const queueRef = useRef<Promise<void>>(Promise.resolve());
   // Once true, state changes are persisted. Stays false until initial fetch completes.
   const readyRef = useRef(false);
 
-  // On mount: fetch from Supabase (single source of truth), fallback to localStorage
+  // Reads never generate income or promote stale browser data into the database.
   useEffect(() => {
     let cancelled = false;
     api.get('/partnership/state')
-      .then((res: { data: PartnershipState | null }) => {
+      .then((res: { data: PartnershipState | null; revision?: string }) => {
         if (cancelled) return;
-        if (res.data && res.data.transactions && res.data.transactions.length > 0) {
-          // Supabase has real data — use it
-          dispatch({ type: 'RESET', payload: res.data });
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(res.data));
-        } else {
-          // Supabase empty — try localStorage (but only if it has real user data, not mock)
-          try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) {
-              const parsed = JSON.parse(raw) as PartnershipState;
-              // Check it's not old mock data (mock IDs were m1-m8)
-              const hasMockIds = parsed.transactions?.some(t => /^m\d+$/.test(t.id));
-              if (parsed.transactions?.length > 0 && !hasMockIds) {
-                dispatch({ type: 'RESET', payload: parsed });
-                // Push localStorage data to Supabase so it's persisted
-                api.put('/partnership/state', parsed).catch(() => {});
-              }
-            }
-          } catch { /* ignore corrupt localStorage */ }
-        }
+        const loaded = res.data || EMPTY_STATE;
+        if (!Array.isArray(loaded.transactions) || !Array.isArray(loaded.settlements)) throw new Error('נתוני השותפות אינם תקינים');
+        savedRef.current = JSON.stringify(loaded);
+        revisionRef.current = res.revision;
+        readyRef.current = true;
+        dispatch({ type: 'RESET', payload: loaded });
+        localStorage.setItem(STORAGE_KEY, savedRef.current);
       })
       .catch(() => {
         // Offline — try localStorage
         if (cancelled) return;
+        readyRef.current = false;
+        setLoadError('המידע מהשרת לא נטען. מוצג עותק מקומי לקריאה בלבד; רענן כדי לערוך.');
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
@@ -361,15 +360,15 @@ export function PartnershipProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => {
         if (cancelled) return;
-        readyRef.current = true;
         setIsLoading(false);
       });
     return () => { cancelled = true; };
   }, []);
 
-  // Auto-generate missing monthly instances for recurring income transactions
-  useEffect(() => {
-    if (isLoading) return;
+  // Preserve recurring proposals, but require a deliberate confirmation before
+  // recording income. Merely opening the partnership page must never add debt.
+  const pendingRecurring = useMemo(() => {
+    if (isLoading || loadError) return [];
 
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
@@ -377,7 +376,7 @@ export function PartnershipProvider({ children }: { children: ReactNode }) {
     const sources = state.transactions.filter(
       t => t.type === 'income' && t.recurring && !t.recurringSourceId
     );
-    if (sources.length === 0) return;
+    if (sources.length === 0) return [];
 
     const toAdd: PartnershipTx[] = [];
 
@@ -426,18 +425,37 @@ export function PartnershipProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    for (const tx of toAdd) {
-      dispatch({ type: 'ADD_TRANSACTION', payload: tx });
-    }
-  }, [isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+    return toAdd;
+  }, [isLoading, loadError, state]);
+
+  function approveRecurring(id: string) {
+    if (!readyRef.current) return;
+    const candidate = pendingRecurring.find(t => t.id === id);
+    if (candidate) dispatch({ type: 'ADD_TRANSACTION', payload: candidate });
+  }
 
   // Save to localStorage + Supabase on state changes (only after initial load)
   useEffect(() => {
     if (!readyRef.current) return; // Don't save during initial load
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const serialized = JSON.stringify(state);
+    if (serialized === savedRef.current) return;
+    localStorage.setItem(STORAGE_KEY, serialized);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      api.put('/partnership/state', state).catch(() => {});
+      queueRef.current = queueRef.current.then(async () => {
+        if (!readyRef.current || savedRef.current === serialized) return;
+        try {
+          const result = await api.put<unknown, { revision: string }>('/partnership/state', state, { headers: revisionRef.current ? { 'If-Match': revisionRef.current } : {} });
+          revisionRef.current = result.revision;
+          savedRef.current = serialized;
+          setSaveError(null);
+        } catch (error) {
+          readyRef.current = false;
+          const message = error instanceof Error ? error.message : 'השמירה לא הצליחה';
+          setSaveError(message + ' · השינויים נשארו בעותק המקומי. רענן לפני עריכה נוספת.');
+          toast.error(message);
+        }
+      });
     }, 800);
   }, [state]);
 
@@ -453,10 +471,10 @@ export function PartnershipProvider({ children }: { children: ReactNode }) {
       .filter(t => t.type === 'income')
       .reduce((s, t) => s + (t.linkedExpenses ?? []).reduce((ls, e) => ls + e.amount, 0), 0);
     const grossProfit = totalIncome - totalExpenses - linkedTotal;
-    const taxReserve = Math.max(0, grossProfit) * (state.settings.taxRate / 100);
+    const taxReserve = filtered.filter(t => t.type === 'income').reduce((sum, t) => sum + (t.breakdown as IncomeBreakdown).taxAmount, 0);
     const afterTaxProfit = grossProfit - taxReserve;
-    const nadavNet = afterTaxProfit * (state.settings.nadavSplit / 100);
-    const davidNet = afterTaxProfit * (state.settings.davidSplit / 100);
+    const nadavNet = filtered.reduce((sum, t) => sum + (t.type === 'income' ? 1 : -1) * t.breakdown.nadavShare, 0);
+    const davidNet = filtered.reduce((sum, t) => sum + (t.type === 'income' ? 1 : -1) * t.breakdown.davidShare, 0);
 
     // Balances always use ALL transactions (running total)
     const allTxs = state.transactions;
@@ -473,7 +491,7 @@ export function PartnershipProvider({ children }: { children: ReactNode }) {
   const computed = useMemo(() => computedForMonth('all'), [computedForMonth]);
 
   return (
-    <PartnershipContext.Provider value={{ state, dispatch, computed, computedForMonth, isLoading }}>
+    <PartnershipContext.Provider value={{ state, dispatch: action => { if (readyRef.current) dispatch(action); }, computed, computedForMonth, isLoading, loadError, saveError, pendingRecurring, approveRecurring }}>
       {children}
     </PartnershipContext.Provider>
   );

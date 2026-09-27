@@ -37,6 +37,8 @@ export interface Client {
   updated_at: string;
   // Computed fields (from API)
   total_revenue?: number;
+  total_revenue_currency?: 'ILS';
+  other_currency_income_count?: number;
   transaction_count?: number;
   avg_transaction?: number;
   last_transaction_date?: string | null;
@@ -109,7 +111,7 @@ export interface BusinessTransaction {
   project_total: number | null;
   expected_payment_date: string | null;
   expected_date_unknown: boolean;
-  payment_schedule: Array<{ amount: number; date: string | null; unknown: boolean }> | null;
+  payment_schedule: Array<{ id?: string; amount: number; date: string | null; unknown: boolean }> | null;
   linked_transaction_id: string | null;
   document_link: string | null;
   linked_expenses?: BusinessTransaction[];
@@ -121,13 +123,17 @@ export interface BusinessTransaction {
 
 export interface CollectionTransaction extends BusinessTransaction {
   collection_type: 'pending_invoice' | 'partial_payment';
-  balance_owed: number;
+  balance_owed: number | null;
+  collected_after_deal?: number;
+  next_payment?: { id: string; amount: number; date: string | null; unknown: boolean } | null;
+  schedule_issue?: 'schedule_total_mismatch' | null;
+  reconciliation_issue?: 'possible_duplicate_receipt' | 'invalid_collection_balance' | null;
   days_since: number;
   client_name: string;
 }
 
 export interface CollectionsSummary {
-  total_pending: number;
+  total_pending: number | null;
   client_count: number;
   oldest_days: number;
 }
@@ -167,7 +173,7 @@ export interface CreateBusinessTransactionInput {
   project_total?: number | null;
   expected_payment_date?: string | null;
   expected_date_unknown?: boolean;
-  payment_schedule?: Array<{ amount: number; date: string | null; unknown: boolean }> | null;
+  payment_schedule?: Array<{ id?: string; amount: number; date: string | null; unknown: boolean }> | null;
   linked_transaction_id?: string | null;
   document_link?: string | null;
 }
@@ -310,6 +316,8 @@ export interface ClientProfitability {
   hasRetainer: boolean;
   retainerAmount: number;
   monthlyBreakdown: Array<{ month: string; income: number; expenses: number; net: number }>;
+  currency?: 'ILS';
+  excludedForeignCurrencyCount?: number;
 }
 
 // ── Forecast ──────────────────────────────────────────────────────────────────

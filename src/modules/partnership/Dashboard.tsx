@@ -181,7 +181,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
             <Coins size={16} color="#EAB308" />
           </div>
           <div>
-            <div className="text-sm font-bold text-white/80">רזרבת מס ({state.settings.taxRate}%)</div>
+            <div className="text-sm font-bold text-white/80">רזרבת ביטוח לאומי/בריאות — אומדן ({state.settings.taxRate}%)</div>
             <div className="text-sm text-white/40">מתוך הרווח הגולמי</div>
           </div>
         </div>
