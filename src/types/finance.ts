@@ -13,7 +13,7 @@ export interface FinancialActivityRecord {
   id: string; date: string; description: string; amount: number; currency: string; category: string;
   scope: 'business' | 'personal'; type: 'income' | 'expense' | 'collection'; origin: 'business_transactions' | 'personal_expenses' | 'bank_transactions';
   merchant: string | null; accountId: string | null; reviewStatus: string | null; paymentStatus: string | null;
-  clientId: string | null; projectTotal: number | null; source: string;
+  clientId: string | null; projectTotal: number | null; source: string; note: string | null;
 }
 export interface FinancialActivityRecords {
   from: string; to: string; currency: string; scope: 'business' | 'personal'; type: 'all' | 'income' | 'expense' | 'collection' | 'received';
@@ -118,6 +118,7 @@ export interface BankTransaction {
   id: string; description: string; merchant?: string; amount: number; signedAmount: number; currency: string; date: string;
   direction: 'in' | 'out'; classification: Classification; category?: string; reviewStatus: string; accountId: string;
   transactionId?: string; personalExpenseId?: string; status: string;
+  duplicate?: boolean; source?: string; note?: string | null;
   reviewHint?: 'credit_card_settlement' | 'possible_own_transfer' | 'paired_transfer_candidate' | 'cash_withdrawal' | 'bank_fee' | 'review' | null;
   possibleTransferPairIds?: string[];
   transferReview?: 'transfer' | 'not_transfer' | null;

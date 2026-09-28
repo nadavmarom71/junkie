@@ -118,12 +118,13 @@ function SumitPreview({preview, file, commit}: {preview: SumitImportPreview; fil
   </div>;
 }
 
-function TransactionReview({transaction, inbox, canMutate}: {transaction: BankTransaction; inbox: Inbox; canMutate:boolean}) {
+export function TransactionReview({transaction, inbox, canMutate}: {transaction: BankTransaction; inbox: Inbox; canMutate:boolean}) {
   const [classification, setClassification] = useState(transaction.classification);
   const [category, setCategory] = useState(transaction.category || '');
   const [remember, setRemember] = useState(false);
   const [confirmNew, setConfirmNew] = useState(false);
   const [confirmNotTransfer, setConfirmNotTransfer] = useState(transaction.transferReview === 'not_transfer');
+  const [note, setNote] = useState(transaction.note || '');
   const save = useFinanceSave();
   const reverse = useFinanceSave();
   const matches = inbox.matches.filter(match => match.bankId === transaction.id);
@@ -135,7 +136,7 @@ function TransactionReview({transaction, inbox, canMutate}: {transaction: BankTr
     {(protectedMovement || pairedCandidate) && <p className="fn-import-warning"><TriangleAlert size={16}/>{transaction.reviewHint === 'credit_card_settlement' ? 'Financy סימן את התנועה הזאת כקשורה לכרטיס. היא יכולה להיות רכישה שמופיעה גם בפירוט הכרטיס, או חיוב חודשי מרוכז. לא נספור את תנועת העו״ש שוב כהוצאה; אם פירוט הכרטיס חסר, ההוצאה נשארת לבדיקה.' : transaction.possibleTransferPairIds?.length ? `נמצאה ${transaction.possibleTransferPairIds.length === 1 ? 'תנועה נגדית' : 'יותר מתנועה נגדית אחת'} בסכום זהה בחשבון אחר, עד יומיים מהתנועה הזו. זו הצעה לבדיקה, לא קביעה.` : 'זו אולי העברה בין החשבונות שלך. כדאי לבדוק גם את הצד השני לפני שקובעים מה קרה.'}</p>}
     <form className="fn-form" onSubmit={e => {
       e.preventDefault();
-      save.mutate({path: `/classification/${encodeURIComponent(transaction.id)}`, body: {classification,category,remember,confirmNew,confirmNotTransfer}});
+      save.mutate({path: `/classification/${encodeURIComponent(transaction.id)}`, body: {classification,category,remember,confirmNew,confirmNotTransfer,note}});
     }}>
       <label>לאן זה שייך?<select value={classification} onChange={e => setClassification(e.target.value as Classification)}>
         {Object.entries(classNames).filter(([value]) => !protectedMovement || value === 'transfer' || value === 'unclassified').map(([value,label]) => <option key={value} value={value}>{label}</option>)}
@@ -143,6 +144,7 @@ function TransactionReview({transaction, inbox, canMutate}: {transaction: BankTr
       {pairedCandidate && ['business','personal'].includes(classification) && <label className="fn-checkbox"><input type="checkbox" checked={confirmNotTransfer} onChange={e => setConfirmNotTransfer(e.target.checked)}/>בדקתי את התנועה השנייה: זו לא העברה בין החשבונות שלי</label>}
       {!protectedMovement && <>
         <label>קטגוריה<input maxLength={100} value={category} onChange={e => setCategory(e.target.value)}/></label>
+        <label>הערה לתנועה<textarea rows={2} maxLength={500} value={note} onChange={e => setNote(e.target.value)} placeholder="למשל: תוספת תקציב ל־API של סוכן אביגיל"/></label>
         <label className="fn-checkbox"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}/>לזכור לאותו ספק בחשבון הזה</label>
         {['business','personal'].includes(classification) && <label className="fn-checkbox"><input type="checkbox" checked={confirmNew} onChange={e => setConfirmNew(e.target.checked)}/>בדקתי: התנועה הזאת עדיין לא רשומה בג׳אנקי</label>}
       </>}
