@@ -657,6 +657,16 @@
 .fn-mini-brand>span{color:var(--fn-mint)}
 .fn-mini-actions{display:flex;align-items:center;gap:3px;padding:3px;border:1px solid color-mix(in oklch,var(--fn-line) 82%,transparent);border-radius:999px;background:color-mix(in oklch,var(--fn-paper) 88%,transparent);box-shadow:0 9px 25px color-mix(in oklch,var(--fn-ink) 6%,transparent);backdrop-filter:blur(18px) saturate(145%)}
 .fn-mini-actions .fn-icon{width:40px;height:40px;min-width:40px;min-height:40px}
+.fn-open-finance-refresh{transition:background-color .15s ease-out,color .15s ease-out,box-shadow .15s ease-out}
+.fn-open-finance-refresh.is-syncing{background:var(--fn-mint);color:var(--fn-green);box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--fn-green) 16%,transparent)}
+.fn-open-finance-refresh.is-syncing .fn-refresh-glyph{animation:fn-open-finance-spin .82s linear infinite;will-change:transform}
+@keyframes fn-open-finance-spin{to{transform:rotate(360deg)}}
+.fn-refresh-status{position:fixed;z-index:55;inset-block-start:66px;inset-inline-end:clamp(12px,calc((100vw - 1360px)/2 + 16px),40px);display:flex;align-items:center;gap:9px;max-width:min(520px,calc(100vw - 24px));min-height:48px;padding:10px 12px 10px 16px;border:1px solid color-mix(in oklch,var(--fn-green) 22%,var(--fn-line));border-radius:18px;background:color-mix(in oklch,var(--fn-paper) 91%,transparent);color:var(--fn-green);box-shadow:0 16px 42px color-mix(in oklch,var(--fn-ink) 14%,transparent);-webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);animation:fn-refresh-status-in .22s cubic-bezier(.22,1,.36,1)}
+.fn-refresh-status.is-error{border-color:color-mix(in oklch,var(--fn-red) 28%,var(--fn-line));color:var(--fn-red)}
+.fn-refresh-status>span{color:var(--fn-ink);font-size:.84rem;line-height:1.45}
+.fn-refresh-status>button{margin-inline-start:auto;min-height:32px;padding:4px 8px;border:0;border-radius:10px;background:transparent;color:var(--fn-muted);font-size:.74rem}
+.fn-refresh-status>button:hover{background:var(--fn-bg);color:var(--fn-ink)}
+@keyframes fn-refresh-status-in{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 .fn-main{padding-block-start:clamp(14px,2vw,24px)}
 .fn-dock-item{position:relative;min-width:0}
 .fn-dock-item>button{display:flex;width:100%;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:8px 12px;border:0;border-radius:20px;background:transparent;color:var(--fn-muted);font-size:.86rem;font-weight:600;white-space:nowrap}
@@ -677,8 +687,8 @@
 
 @media(pointer:fine) and (hover:hover){.fn-dock-item>button,.fn-dock-bubble>button{transition:transform .18s ease-out,background-color .18s ease-out,box-shadow .18s ease-out}}
 @media(max-width:900px){.fn-dock-item>button{flex-direction:column;gap:3px;padding-inline:6px;font-size:.72rem}.fn-dock-chevron{position:absolute;inset-inline-end:8px;inset-block-start:8px}}
-@media(max-width:620px){.fn-mini-chrome{width:calc(100% - 24px);margin-top:8px}.fn-mini-brand{width:40px;height:40px;border-radius:14px}.fn-mini-actions .fn-icon{width:38px;height:38px;min-width:38px;min-height:38px}.fn-main{padding-block-start:12px}.fn-dock-item>button{min-width:0;min-height:52px;border-radius:17px;padding:5px 2px}.fn-dock-item>button svg{width:19px}.fn-dock-chevron{display:none}.fn-dock-bubble{position:fixed;left:12px;right:12px;inset-block-end:82px;width:auto;transform:translateY(12px) scale(.97);transform-origin:50% 100%;border-radius:28px}.fn-dock-bubble.is-open{transform:translateY(0) scale(1)}.fn-dock-bubble::after{inset-block-end:-12px}.fn-dock-bubble>button{min-height:58px}}
-@media(prefers-reduced-motion:reduce){.fn-dock-bubble,.fn-dock-chevron,.fn-dock-bubble>button{transition:none!important}}
+@media(max-width:620px){.fn-mini-chrome{width:calc(100% - 24px);margin-top:8px}.fn-mini-brand{width:40px;height:40px;border-radius:14px}.fn-mini-actions .fn-icon{width:38px;height:38px;min-width:38px;min-height:38px}.fn-refresh-status{inset-block-start:60px;inset-inline:12px;max-width:none}.fn-main{padding-block-start:12px}.fn-dock-item>button{min-width:0;min-height:52px;border-radius:17px;padding:5px 2px}.fn-dock-item>button svg{width:19px}.fn-dock-chevron{display:none}.fn-dock-bubble{position:fixed;left:12px;right:12px;inset-block-end:82px;width:auto;transform:translateY(12px) scale(.97);transform-origin:50% 100%;border-radius:28px}.fn-dock-bubble.is-open{transform:translateY(0) scale(1)}.fn-dock-bubble::after{inset-block-end:-12px}.fn-dock-bubble>button{min-height:58px}}
+@media(prefers-reduced-motion:reduce){.fn-dock-bubble,.fn-dock-chevron,.fn-dock-bubble>button,.fn-refresh-status{transition:none!important;animation:none!important}.fn-open-finance-refresh.is-syncing .fn-refresh-glyph{animation-duration:1.8s}}
 
 /* Category explorer polish — stable row/segment mapping and exact icon centering. */
 .fn-data-icon,.fn-scope-account-icon,.fn-provider-icon,.fn-dock-bubble-icon,.fn-event-icon{position:relative;display:inline-block;overflow:hidden}

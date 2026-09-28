@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowUpLeft, ChartNoAxesCombined, ChevronDown, CircleHelp, HandCoins, House, Link2, LogOut, MoreHorizontal, ReceiptText, RefreshCw, Repeat2, Sparkles, UserRound, Users2, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowUpLeft, ChartNoAxesCombined, CheckCircle2, ChevronDown, CircleHelp, HandCoins, House, Link2, LogOut, MoreHorizontal, ReceiptText, RefreshCw, Repeat2, Sparkles, TriangleAlert, UserRound, Users2, Wallet } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { useFinance, useFinanceSave } from '@/hooks/useFinance';
-import type { FinancialState, Forecast, Obligation } from '@/types/finance';
+import { financeGet, useFinance, useFinanceSave } from '@/hooks/useFinance';
+import type { Connections, FinancialState, Forecast, Obligation } from '@/types/finance';
 import FinanceTimeline, { TimelineRows } from '@/components/finance/FinanceTimeline';
 import FinanceScenario from '@/components/finance/FinanceScenario';
 import FinancePartnership from '@/components/finance/FinancePartnership';
@@ -37,8 +37,40 @@ export default function FinancePage() {
   const [menu,setMenu] = useState(false);
   const [scenario,setScenario] = useState<string | null>(null);
   const [help,setHelp] = useState(false);
+  const [refreshNotice,setRefreshNotice] = useState<{kind:'success'|'error';text:string} | null>(null);
   const client = useQueryClient();
+  const openFinanceSync = useFinanceSave();
   const {logout,localAccess} = useAuth();
+  useEffect(() => {
+    if (!refreshNotice) return;
+    const timer = window.setTimeout(() => setRefreshNotice(null),8000);
+    return () => window.clearTimeout(timer);
+  },[refreshNotice]);
+  async function refreshFromOpenFinance() {
+    if (openFinanceSync.isPending) return;
+    setRefreshNotice(null);
+    try {
+      await openFinanceSync.mutateAsync({method:'post',path:'/sync/open_finance',body:{}});
+      await client.refetchQueries({queryKey:['finance'],type:'active'});
+      const connections = await financeGet<Connections>('/connections');
+      client.setQueryData(['finance','/connections'],connections);
+      const openFinance = connections.open_finance;
+      const providerDates = [
+        ...(openFinance.checkingAccounts || []).map(account => account.connectionDataDate),
+        ...(openFinance.bankConnections || []).map(connection => connection.lastFetchedDataDate),
+      ].filter((value): value is string => Boolean(value)).sort();
+      const balanceDates = (openFinance.checkingAccounts || []).map(account => account.balanceAt).filter((value): value is string => Boolean(value)).sort();
+      const providerDate = providerDates.at(-1);
+      const balanceDate = balanceDates.at(-1);
+      const freshness = [
+        providerDate ? `נתוני הספק עד ${numericDateLabel(providerDate)}` : null,
+        balanceDate && balanceDate !== providerDate ? `יתרות עד ${numericDateLabel(balanceDate)}` : null,
+      ].filter(Boolean).join(' · ');
+      setRefreshNotice({kind:'success',text:freshness ? `הסנכרון הושלם. ${freshness}.` : 'הסנכרון הושלם, אך Open Finance לא מסרה תאריך מידע חדש.'});
+    } catch (error) {
+      setRefreshNotice({kind:'error',text:error instanceof Error ? `הסנכרון לא הושלם: ${error.message}` : 'הסנכרון מול Open Finance לא הושלם.'});
+    }
+  }
   function navigate(next: string, focus?: 'collections') {setParams(next === 'overview' ? {} : {view:next,...(focus ? {focus} : {})});setMenu(false);window.scrollTo({top:0});}
   const activitySection = params.get('section') || (params.get('focus') === 'collections' ? 'collections' : 'activity');
   function chooseActivitySection(section: string) {
@@ -51,7 +83,8 @@ export default function FinancePage() {
     window.scrollTo({top:0,behavior:'smooth'});
   }
   return <div className="fn-app fn-theme" dir="rtl"><a href="#finance-content" className="fn-skip-link">לתוכן המרכזי</a>
-    <div className="fn-workspace"><header className="fn-mini-chrome" aria-label="כלי Junkie"><span className="fn-mini-brand" dir="ltr" aria-label="Junkie">j<span>.</span></span><div className="fn-mini-actions"><button className="fn-icon" title="רענון נתונים" aria-label="רענון נתונים" onClick={() => void client.invalidateQueries({queryKey:['finance']})}><RefreshCw size={18}/></button><button className="fn-icon" aria-label="על הנתונים והחישובים" onClick={() => setHelp(true)}><CircleHelp size={19}/></button><button className="fn-icon" aria-label="כלים נוספים" onClick={() => setMenu(true)}><MoreHorizontal size={21}/></button></div></header>
+    <div className="fn-workspace"><header className="fn-mini-chrome" aria-label="כלי Junkie"><span className="fn-mini-brand" dir="ltr" aria-label="Junkie">j<span>.</span></span><div className="fn-mini-actions"><button className={`fn-icon fn-open-finance-refresh${openFinanceSync.isPending ? ' is-syncing' : ''}`} title="משיכת נתונים עכשיו מ־Open Finance" aria-label={openFinanceSync.isPending ? 'מסנכרן עכשיו מול Open Finance' : 'משיכת נתונים עכשיו מ־Open Finance'} aria-busy={openFinanceSync.isPending} disabled={openFinanceSync.isPending} onClick={() => void refreshFromOpenFinance()}><RefreshCw className="fn-refresh-glyph" size={18}/></button><button className="fn-icon" aria-label="על הנתונים והחישובים" onClick={() => setHelp(true)}><CircleHelp size={19}/></button><button className="fn-icon" aria-label="כלים נוספים" onClick={() => setMenu(true)}><MoreHorizontal size={21}/></button></div></header>
+      {refreshNotice && <div className={`fn-refresh-status is-${refreshNotice.kind}`} role="status" aria-live="polite">{refreshNotice.kind === 'success' ? <CheckCircle2 size={18}/> : <TriangleAlert size={18}/>}<span>{refreshNotice.text}</span><button type="button" aria-label="סגירת הודעת הסנכרון" onClick={() => setRefreshNotice(null)}>סגור</button></div>}
       <main id="finance-content" className="fn-main">{view === 'overview' && <Overview navigate={navigate} openScenario={setScenario}/>} {view === 'activity' && <FinanceActivity key={params.get('focus') === 'collections' ? 'collections' : 'activity'} initialSection={params.get('focus') === 'collections' ? 'collections' : 'activity'}/>}{view === 'partnership' && <FinancePartnership/>}{view === 'flow' && <FinanceTimeline/>}{view === 'connections' && <FinanceConnections/>}</main>
       <FinanceDock view={view} activitySection={activitySection} navigate={navigate} chooseActivitySection={chooseActivitySection} openScenario={() => setScenario('')}/>
     </div>
