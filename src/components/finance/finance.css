@@ -292,6 +292,12 @@
 .fn-schedule-row .fn-checkbox{flex-direction:row;align-items:center;gap:6px;white-space:nowrap}
 .fn-record-remainder{font-size:.92rem;margin-top:14px!important}
 .fn-record-reminder{border-top:1px solid var(--fn-line);padding-top:10px;margin-top:24px}
+.fn-collection-groups{display:grid;gap:18px}
+.fn-upcoming-retainers{background:color-mix(in oklch,var(--fn-income-soft) 55%,var(--fn-paper))}
+.fn-upcoming-retainers .fn-record-total{align-items:center}
+.fn-upcoming-retainers .fn-record-total small{color:var(--fn-muted)}
+.fn-static-record-row{cursor:default}
+.fn-static-record-row:hover{transform:none!important}
 .fn-delete-confirm{padding:16px 18px;border-radius:22px;background:oklch(96% .015 28);margin-top:12px}
 .fn-delete-confirm p{font-size:.86rem;margin-block:8px 16px!important}
 .fn-danger-link{color:var(--fn-red)!important}

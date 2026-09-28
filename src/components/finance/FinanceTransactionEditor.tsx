@@ -22,12 +22,12 @@ const cents = (value: number) => Math.round(value * 100);
 const validUrl = (value: string) => !value || /^https?:\/\//i.test(value) && (() => { try { new URL(value); return true; } catch { return false; } })();
 const optionList = (defaults: string[], existing: string[], current: string) => [...new Set([...defaults, ...existing, current].filter(Boolean))];
 
-export function FinanceBusinessEditor({transaction, linkedTo, onSaved}: {transaction?: BusinessTransaction; linkedTo?: BusinessTransaction; onSaved: () => void}) {
+export function FinanceBusinessEditor({transaction, linkedTo, collectionDraft = false, onSaved}: {transaction?: BusinessTransaction; linkedTo?: BusinessTransaction; collectionDraft?: boolean; onSaved: () => void}) {
   const fixedCollection = transaction?.type === 'collection';
   const [type, setType] = useState<BusinessKind>(transaction?.type || (linkedTo ? 'expense' : 'income'));
   const [amount, setAmount] = useState(transaction ? String(transaction.amount) : '');
   const [description, setDescription] = useState(transaction?.description || '');
-  const [category, setCategory] = useState(transaction?.category || (linkedTo?.category || ''));
+  const [category, setCategory] = useState(transaction?.category || (linkedTo?.category || (collectionDraft ? 'ייעוץ ושירותים' : '')));
   const [date, setDate] = useState(transaction?.date || israelToday());
   const [clientId, setClientId] = useState(transaction?.client_id || linkedTo?.client_id || '');
   const [newClientName, setNewClientName] = useState('');
@@ -35,7 +35,7 @@ export function FinanceBusinessEditor({transaction, linkedTo, onSaved}: {transac
   const [projectTotal, setProjectTotal] = useState(transaction?.project_total == null ? '' : String(transaction.project_total));
   const [expectedDate, setExpectedDate] = useState(transaction?.expected_payment_date || '');
   const [schedule, setSchedule] = useState<ScheduleDraft[]>((transaction?.payment_schedule || []).map(item => ({id: item.id || crypto.randomUUID(), amount: String(item.amount), date: item.date || '', unknown: item.unknown})));
-  const [partnerPct, setPartnerPct] = useState(transaction?.partner_split_pct == null ? '' : String(transaction.partner_split_pct));
+  const [partnerPct, setPartnerPct] = useState(transaction?.partner_split_pct == null ? (collectionDraft ? '0' : '') : String(transaction.partner_split_pct));
   const [notes, setNotes] = useState(transaction?.notes || '');
   const [documentLink, setDocumentLink] = useState(transaction?.document_link || '');
   const [advancedOpen, setAdvancedOpen] = useState(!!transaction && !!(transaction.project_total || transaction.payment_schedule?.length || transaction.partner_split_pct));
@@ -106,12 +106,13 @@ export function FinanceBusinessEditor({transaction, linkedTo, onSaved}: {transac
   }
 
   return <form className="fn-form" onSubmit={submit}>
+    {collectionDraft && !transaction && <p className="fn-notice"><strong>רושמים כאן כסף שעוד צריך להיכנס.</strong> הוא יופיע בגבייה ובתזרים, אבל לא ייחשב כסף שהתקבל עד שתדווח על תקבול או שתימצא התאמה בבנק.</p>}
     {linkedTo && <p className="fn-notice">ההוצאה תקושר לעסקה: <strong>{linkedTo.description}</strong></p>}
     <div className="fn-form-grid">
       <label>סוג רישום<select value={type} disabled={!!transaction || !!linkedTo} onChange={event => {setType(event.target.value as BusinessKind); setCategory('');}}><option value="income">עסקה / הכנסה</option><option value="expense">הוצאה עסקית</option>{fixedCollection && <option value="collection">תקבול על עסקה</option>}</select></label>
-      <label>{isIncome ? paymentStatus === 'pending' ? 'שווי העסקה' : 'הסכום שדיווחת שהתקבל' : 'סכום'}<input type="number" min="0.01" step="0.01" required value={amount} onChange={event => setAmount(event.target.value)}/></label>
+      <label>{isIncome ? paymentStatus === 'pending' ? (collectionDraft ? 'כמה צריך לגבות' : 'שווי העסקה') : 'הסכום שדיווחת שהתקבל' : 'סכום'}<input type="number" min="0.01" step="0.01" required value={amount} onChange={event => setAmount(event.target.value)}/></label>
     </div>
-    <label>מה העסקה? <input required maxLength={500} value={description} onChange={event => setDescription(event.target.value)} placeholder="שם הפרויקט או הספק"/></label>
+    <label>{collectionDraft ? 'על מה הגבייה?' : 'מה העסקה?'} <input required maxLength={500} value={description} onChange={event => setDescription(event.target.value)} placeholder={collectionDraft ? 'למשל: עבודה שעתית למירי' : 'שם הפרויקט או הספק'}/></label>
     <div className="fn-form-grid"><label>קטגוריה<select required value={category} onChange={event => setCategory(event.target.value)}><option value="">בחירת קטגוריה</option>{choices.map(choice => <option key={choice} value={choice}>{choice}</option>)}</select></label><label>{isIncome ? 'תאריך סגירת העסקה' : 'תאריך הרישום'}<input type="date" required value={date} onChange={event => setDate(event.target.value)}/></label></div>
     <label>לקוח<select value={clientId} onChange={event => setClientId(event.target.value)}><option value="">ללא לקוח</option>{clients.data?.map(client => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
     <div className="fn-inline-entry"><input aria-label="שם לקוח חדש" value={newClientName} onChange={event => setNewClientName(event.target.value)} placeholder="לקוח חדש"/><button type="button" className="fn-secondary" disabled={!newClientName.trim() || busy} onClick={() => void addClient()}><Plus size={15}/> יצירת לקוח</button></div>

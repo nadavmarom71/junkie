@@ -16,10 +16,11 @@ interface RetainersResponse {
   };
 }
 
-export function useRetainers(status?: string) {
+export function useRetainers(status?: string, enabled = true) {
   return useQuery<RetainersResponse>({
     queryKey: [RETAINERS_KEY, status],
     queryFn: () => api.get('/retainers', { params: { status } }),
+    enabled,
   });
 }
 
