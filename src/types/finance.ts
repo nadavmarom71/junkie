@@ -119,6 +119,7 @@ export interface BankTransaction {
   direction: 'in' | 'out'; classification: Classification; category?: string; reviewStatus: string; accountId: string;
   transactionId?: string; personalExpenseId?: string; status: string;
   duplicate?: boolean; source?: string; note?: string | null;
+  possibleProviderDuplicate?: boolean;
   reviewHint?: 'credit_card_settlement' | 'possible_own_transfer' | 'paired_transfer_candidate' | 'cash_withdrawal' | 'bank_fee' | 'review' | null;
   possibleTransferPairIds?: string[];
   transferReview?: 'transfer' | 'not_transfer' | null;

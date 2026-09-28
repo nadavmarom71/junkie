@@ -133,6 +133,7 @@ export function TransactionReview({transaction, inbox, canMutate}: {transaction:
   const protectedMovement = transaction.reviewHint === 'credit_card_settlement' || transaction.reviewHint === 'possible_own_transfer';
   const pairedCandidate = transaction.reviewHint === 'paired_transfer_candidate';
   return <fieldset disabled={!canMutate || save.isPending || reverse.isPending} style={{border:0,padding:0,margin:0,minWidth:0}}><div className="fn-detail-amount">{money(transaction.signedAmount,transaction.currency)}</div><h3>{transaction.description}</h3><p className="fn-muted">{dateLabel(transaction.date,true)} · {transaction.merchant}</p>
+    {transaction.possibleProviderDuplicate && <p className="fn-import-warning"><TriangleAlert size={16}/>Open Finance החזיר תנועה נוספת עם אותו ספק, סכום, תאריך וחשבון. צריך לוודא אם אלה שני חיובים אמיתיים או כפילות לפני שמאשרים.</p>}
     {(protectedMovement || pairedCandidate) && <p className="fn-import-warning"><TriangleAlert size={16}/>{transaction.reviewHint === 'credit_card_settlement' ? 'Financy סימן את התנועה הזאת כקשורה לכרטיס. היא יכולה להיות רכישה שמופיעה גם בפירוט הכרטיס, או חיוב חודשי מרוכז. לא נספור את תנועת העו״ש שוב כהוצאה; אם פירוט הכרטיס חסר, ההוצאה נשארת לבדיקה.' : transaction.possibleTransferPairIds?.length ? `נמצאה ${transaction.possibleTransferPairIds.length === 1 ? 'תנועה נגדית' : 'יותר מתנועה נגדית אחת'} בסכום זהה בחשבון אחר, עד יומיים מהתנועה הזו. זו הצעה לבדיקה, לא קביעה.` : 'זו אולי העברה בין החשבונות שלך. כדאי לבדוק גם את הצד השני לפני שקובעים מה קרה.'}</p>}
     <form className="fn-form" onSubmit={e => {
       e.preventDefault();
@@ -145,7 +146,7 @@ export function TransactionReview({transaction, inbox, canMutate}: {transaction:
       {!protectedMovement && <>
         <label>קטגוריה<input maxLength={100} value={category} onChange={e => setCategory(e.target.value)}/></label>
         <label>הערה לתנועה<textarea rows={2} maxLength={500} value={note} onChange={e => setNote(e.target.value)} placeholder="למשל: תוספת תקציב ל־API של סוכן אביגיל"/></label>
-        <label className="fn-checkbox fn-review-choice"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}/><span><strong>לסווג כך אוטומטית גם בפעם הבאה</strong><small>רק תנועות עתידיות מאותו ספק ובאותו חשבון יקבלו את אותו סיווג וקטגוריה. הן עדיין יחכו לאישור לפני שייכנסו לסכומים.</small></span></label>
+        <label className="fn-checkbox fn-review-choice"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}/><span><strong>לסווג כך אוטומטית גם בפעם הבאה</strong><small>הוצאות עתידיות מאותו ספק ובאותו חשבון ייכנסו אוטומטית. כפילות, העברה, חיוב אשראי מרוכז או חוסר התאמה עדיין יעברו לבדיקה.</small></span></label>
         {['business','personal'].includes(classification) && <label className="fn-checkbox fn-review-choice"><input type="checkbox" checked={confirmNew} onChange={e => setConfirmNew(e.target.checked)}/><span><strong>לאשר ולהכניס את התנועה לסכומי ההוצאות</strong><small>סמן רק אם ההוצאה הזאת לא הוזנה קודם ידנית בג׳אנקי. כך נמנעת ספירה כפולה.</small></span></label>}
       </>}
       {!protectedMovement && <p className="fn-footnote">אם זו הוצאה שכבר רשמת, משייכים אותה לרשומה הקיימת למטה. בלי האישור המפורש למעלה היא נשארת בתור הבדיקה ולא נכנסת לסכומים.</p>}
