@@ -105,6 +105,10 @@ export function FinanceSheet({open, onClose, title, children}: {open: boolean; o
   const pointerDown=(event:ReactPointerEvent<HTMLDivElement>)=>{
     if(event.pointerType==='touch'||event.button!==0)return;
     const surface=scrollRef.current,target=event.target as Element;
+    // Controls inside the draggable header must keep normal desktop click
+    // behavior. Capturing their pointer on the sheet prevents the browser from
+    // dispatching the subsequent click (most visibly on the close button).
+    if(target.closest('button,a,input,select,textarea,summary,[role="button"]'))return;
     if(!surface||(surface.scrollTop>0&&!target.closest('[data-sheet-drag-zone]')))return;
     begin(event.clientY,event.pointerId);surface.setPointerCapture(event.pointerId);
   };
@@ -120,7 +124,7 @@ export function FinanceSheet({open, onClose, title, children}: {open: boolean; o
   return <dialog ref={ref} className="fn-sheet fn-theme" dir="rtl" aria-labelledby={titleId} onCancel={event=>{event.preventDefault();onClose();}} onClose={()=>{if(open)onClose();}} onClick={e => {if (e.target === e.currentTarget) onClose();}}>
     <div ref={scrollRef} className="fn-sheet-inner" onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd}>
       <div className="fn-sheet-handle" data-sheet-drag-zone aria-hidden="true"/>
-      <header className="fn-section-head" data-sheet-drag-zone><h2 id={titleId}>{title}</h2><button className="fn-icon fn-sheet-close" onClick={onClose} aria-label="סגירת החלונית"><X size={21}/></button></header>{children}
+      <header className="fn-section-head" data-sheet-drag-zone><h2 id={titleId}>{title}</h2><button className="fn-icon fn-sheet-close" onPointerDown={event=>event.stopPropagation()} onClick={onClose} aria-label="סגירת החלונית"><X size={21}/></button></header>{children}
     </div>
   </dialog>;
 }

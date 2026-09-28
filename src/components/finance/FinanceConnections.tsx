@@ -145,10 +145,10 @@ export function TransactionReview({transaction, inbox, canMutate}: {transaction:
       {!protectedMovement && <>
         <label>קטגוריה<input maxLength={100} value={category} onChange={e => setCategory(e.target.value)}/></label>
         <label>הערה לתנועה<textarea rows={2} maxLength={500} value={note} onChange={e => setNote(e.target.value)} placeholder="למשל: תוספת תקציב ל־API של סוכן אביגיל"/></label>
-        <label className="fn-checkbox"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}/>לזכור לאותו ספק בחשבון הזה</label>
-        {['business','personal'].includes(classification) && <label className="fn-checkbox"><input type="checkbox" checked={confirmNew} onChange={e => setConfirmNew(e.target.checked)}/>בדקתי: התנועה הזאת עדיין לא רשומה בג׳אנקי</label>}
+        <label className="fn-checkbox fn-review-choice"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}/><span><strong>לסווג כך אוטומטית גם בפעם הבאה</strong><small>רק תנועות עתידיות מאותו ספק ובאותו חשבון יקבלו את אותו סיווג וקטגוריה. הן עדיין יחכו לאישור לפני שייכנסו לסכומים.</small></span></label>
+        {['business','personal'].includes(classification) && <label className="fn-checkbox fn-review-choice"><input type="checkbox" checked={confirmNew} onChange={e => setConfirmNew(e.target.checked)}/><span><strong>לאשר ולהכניס את התנועה לסכומי ההוצאות</strong><small>סמן רק אם ההוצאה הזאת לא הוזנה קודם ידנית בג׳אנקי. כך נמנעת ספירה כפולה.</small></span></label>}
       </>}
-      {!protectedMovement && <p className="fn-footnote">אם זו עסקה שכבר רשמת, משייכים אותה למטה במקום לספור שוב. שינוי סיווג בלבד לא מאשר אוטומטית הכנסה חדשה.</p>}
+      {!protectedMovement && <p className="fn-footnote">אם זו הוצאה שכבר רשמת, משייכים אותה לרשומה הקיימת למטה. בלי האישור המפורש למעלה היא נשארת בתור הבדיקה ולא נכנסת לסכומים.</p>}
       <div><button className="fn-primary" disabled={save.isPending || (pairedCandidate && ['business','personal'].includes(classification) && !confirmNotTransfer && transaction.transferReview!=='not_transfer')}>{save.isPending ? 'שומר…' : 'שמירת הסיווג'}</button>{save.isSuccess && <span className="fn-saved" role="status">הסיווג נשמר</span>}</div>
       <FinanceError error={save.error}/>
     </form>
