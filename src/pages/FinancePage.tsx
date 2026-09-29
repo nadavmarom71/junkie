@@ -38,6 +38,7 @@ export default function FinancePage() {
   const [scenario,setScenario] = useState<string | null>(null);
   const [help,setHelp] = useState(false);
   const [refreshNotice,setRefreshNotice] = useState<{kind:'success'|'error';text:string} | null>(null);
+  const [isRefreshing,setIsRefreshing] = useState(false);
   const client = useQueryClient();
   const openFinanceSync = useFinanceSave();
   const {logout,localAccess} = useAuth();
@@ -47,8 +48,11 @@ export default function FinancePage() {
     return () => window.clearTimeout(timer);
   },[refreshNotice]);
   async function refreshFromOpenFinance() {
-    if (openFinanceSync.isPending) return;
+    if (isRefreshing) return;
     setRefreshNotice(null);
+    setIsRefreshing(true);
+    const startedAt = performance.now();
+    let notice: {kind:'success'|'error';text:string};
     try {
       await openFinanceSync.mutateAsync({method:'post',path:'/sync/open_finance',body:{}});
       await client.refetchQueries({queryKey:['finance'],type:'active'});
@@ -66,9 +70,16 @@ export default function FinancePage() {
         providerDate ? `נתוני הספק עד ${numericDateLabel(providerDate)}` : null,
         balanceDate && balanceDate !== providerDate ? `יתרות עד ${numericDateLabel(balanceDate)}` : null,
       ].filter(Boolean).join(' · ');
-      setRefreshNotice({kind:'success',text:freshness ? `הסנכרון הושלם. ${freshness}.` : 'הסנכרון הושלם, אך Open Finance לא מסרה תאריך מידע חדש.'});
+      notice={kind:'success',text:freshness ? `הסנכרון הושלם. ${freshness}.` : 'הסנכרון הושלם, אך Open Finance לא מסרה תאריך מידע חדש.'};
     } catch (error) {
-      setRefreshNotice({kind:'error',text:error instanceof Error ? `הסנכרון לא הושלם: ${error.message}` : 'הסנכרון מול Open Finance לא הושלם.'});
+      notice={kind:'error',text:error instanceof Error ? `הסנכרון לא הושלם: ${error.message}` : 'הסנכרון מול Open Finance לא הושלם.'};
+    } finally {
+      // Keep the feedback visible even when the provider returns immediately;
+      // the state still spans the actual request and all active finance reloads.
+      const remaining=Math.max(0,700-(performance.now()-startedAt));
+      if(remaining)await new Promise(resolve=>window.setTimeout(resolve,remaining));
+      setIsRefreshing(false);
+      setRefreshNotice(notice!);
     }
   }
   function navigate(next: string, focus?: 'collections') {setParams(next === 'overview' ? {} : {view:next,...(focus ? {focus} : {})});setMenu(false);window.scrollTo({top:0});}
@@ -83,7 +94,7 @@ export default function FinancePage() {
     window.scrollTo({top:0,behavior:'smooth'});
   }
   return <div className="fn-app fn-theme" dir="rtl"><a href="#finance-content" className="fn-skip-link">לתוכן המרכזי</a>
-    <div className="fn-workspace"><header className="fn-mini-chrome" aria-label="כלי Junkie"><span className="fn-mini-brand" dir="ltr" aria-label="Junkie">j<span>.</span></span><div className="fn-mini-actions"><button className={`fn-icon fn-open-finance-refresh${openFinanceSync.isPending ? ' is-syncing' : ''}`} title="משיכת נתונים עכשיו מ־Open Finance" aria-label={openFinanceSync.isPending ? 'מסנכרן עכשיו מול Open Finance' : 'משיכת נתונים עכשיו מ־Open Finance'} aria-busy={openFinanceSync.isPending} disabled={openFinanceSync.isPending} onClick={() => void refreshFromOpenFinance()}><RefreshCw className="fn-refresh-glyph" size={18}/></button><button className="fn-icon" aria-label="על הנתונים והחישובים" onClick={() => setHelp(true)}><CircleHelp size={19}/></button><button className="fn-icon" aria-label="כלים נוספים" onClick={() => setMenu(true)}><MoreHorizontal size={21}/></button></div></header>
+    <div className="fn-workspace"><header className="fn-mini-chrome" aria-label="כלי Junkie"><span className="fn-mini-brand" dir="ltr" aria-label="Junkie">j<span>.</span></span><div className="fn-mini-actions"><button className={`fn-icon fn-open-finance-refresh${isRefreshing ? ' is-syncing' : ''}`} title="משיכת נתונים עכשיו מ־Open Finance" aria-label={isRefreshing ? 'מסנכרן עכשיו מול Open Finance' : 'משיכת נתונים עכשיו מ־Open Finance'} aria-busy={isRefreshing} disabled={isRefreshing} onClick={() => void refreshFromOpenFinance()}><RefreshCw className="fn-refresh-glyph" size={18}/></button><button className="fn-icon" aria-label="על הנתונים והחישובים" onClick={() => setHelp(true)}><CircleHelp size={19}/></button><button className="fn-icon" aria-label="כלים נוספים" onClick={() => setMenu(true)}><MoreHorizontal size={21}/></button></div></header>
       {refreshNotice && <div className={`fn-refresh-status is-${refreshNotice.kind}`} role="status" aria-live="polite">{refreshNotice.kind === 'success' ? <CheckCircle2 size={18}/> : <TriangleAlert size={18}/>}<span>{refreshNotice.text}</span><button type="button" aria-label="סגירת הודעת הסנכרון" onClick={() => setRefreshNotice(null)}>סגור</button></div>}
       <main id="finance-content" className="fn-main">{view === 'overview' && <Overview navigate={navigate} openScenario={setScenario}/>} {view === 'activity' && <FinanceActivity key={params.get('focus') === 'collections' ? 'collections' : 'activity'} initialSection={params.get('focus') === 'collections' ? 'collections' : 'activity'}/>}{view === 'partnership' && <FinancePartnership/>}{view === 'flow' && <FinanceTimeline/>}{view === 'connections' && <FinanceConnections/>}</main>
       <FinanceDock view={view} activitySection={activitySection} navigate={navigate} chooseActivitySection={chooseActivitySection} openScenario={() => setScenario('')}/>
