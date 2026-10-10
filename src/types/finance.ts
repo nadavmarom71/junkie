@@ -45,9 +45,17 @@ export interface Partnership {
   unresolved?: {id:string;date?:string;amount?:number;status:string;reason?:string;source?:string}[];
   outstanding: Fact; missing: unknown[];
 }
-export interface Obligation { id: string; label: string; amount: number | null; currency?: string; status: Trust; date: string | null; reserved: boolean; source: string; note?: string }
+export interface CalculationReliability { status: 'confirmed' | 'estimated' | 'incomplete'; issues: string[] }
+export interface Obligation {
+  id: string; label: string; amount: number | null; currency?: string; status: Trust; date: string | null; reserved: boolean; source: string; note?: string;
+  sources?: string[]; boundary?: {date: string; source: string | null; kind: string};
+  items?: {id: string; source: string; merchant: string; amount: number; direction: 'in'|'out'; date: string; transactionDate: string; valueDate: string | null; status: string; providerStatus: string | null; statusInferred: boolean; providerTransactionId: string | null; providerReference: string | null; supersedes: string[]; supersededBy: string | null; reason: string}[];
+  overlap?: {source: string; candidates: string[]; reason: string}[];
+  excluded?: {source: string; replacedBy: string; amount: number; reason: string}[];
+}
 export interface FinancialState {
   asOf: string; currency: string; fetchedAt: string; bank: Fact; available: Fact; reserved: Fact;
+  reliability?: CalculationReliability;
   lastKnownBank?: {amount: number; asOf: string; sources: string[]} | null;
   lastKnownAvailable?: (Fact & {asOf: string}) | null;
   accounts: {id: string; name: string; type: string; providerId?: string | null; loanType?: string | null; product?: string | null; balance: number | null; currency: string; asOf: string | null; status: Trust; source: string; purpose: AccountPurpose | null; connectionStatus?: string | null; connectionDataDate?: string | null; listedInLatestSync?: boolean | null}[];
@@ -69,6 +77,7 @@ export interface CashEvent {
 export interface Checkpoint { days: number; date: string; bank: number | null; available: number | null; change: number | null; withoutExpectedIncome: number | null }
 export interface Forecast {
   asOf: string; days: number; end: string; state: FinancialState; events: CashEvent[];
+  reliability?: CalculationReliability;
   livingAverage?: { status: Trust; window: { from: string; to: string; days: number }; sampleCount: number; total: number | null; daily: number | null; monthly: number | null; sources: string[]; note: string; coverage?: {partial: boolean; warnings: string[]; legacyCount: number; bankCount: number; awaitingReview: number; cardSettlements: number; cardDetails: number} };
   undated: {id: string; label: string; amount: number; date?: string; reason: string; source: string}[];
   checkpoints: Checkpoint[]; minimum: number | null; closingAvailable: number | null;
