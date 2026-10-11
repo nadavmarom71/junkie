@@ -5,6 +5,7 @@ export interface FinancialSummary {
   from: string; to: string; currency: string; received: Fact; businessSpending: Fact; personalSpending: Fact;
   spendingCoverage?: {status: 'reviewed' | 'partial' | 'unknown'; unreviewedCount: number | null; note: string};
   grossTurnover?: Fact; contractVolume?: Fact; businessVolume?: Fact; collections?: Fact; openCollections?: Fact; cohortReceived?: Fact;
+  contractItems?: {id:string;date:string|null;description:string;amount:number;source:string}[];
   partnerShare?: Fact; nadavRetained?: Fact; partnerItems?: PartnershipItem[];
   revenueBasis?: {cohort: string; from: string; to: string; settlementAsOf: string; cashFlowField: string; invalidSources: string[]};
   categories: {scope: string; category: string; amount: number}[];
@@ -55,6 +56,7 @@ export interface Obligation {
   excluded?: {source: string; replacedBy: string; amount: number; reason: string}[];
 }
 export interface FinancialState {
+  investments?: {id:string;name:string;currency:string;currentValue:number|null;asOf:string|null;status:Trust;source:string;historicalReference:number|null;deposits:number;note:string|null}[];
   asOf: string; currency: string; fetchedAt: string; bank: Fact; available: Fact; reserved: Fact;
   bankBasis?: 'expected' | 'booked';
   reliability?: CalculationReliability;

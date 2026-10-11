@@ -447,6 +447,7 @@
 .fn-filter-dock .fn-segments{background:transparent}
 /* One date range drives the summary, donut and transaction list. */
 .fn-period-filter{margin-bottom:24px;padding:14px 18px;border:1px solid var(--fn-line);border-radius:26px;background:color-mix(in oklch,var(--fn-paper) 90%,var(--fn-mint));box-shadow:0 8px 24px color-mix(in oklch,var(--fn-ink) 4%,transparent)}
+.fn-month-disclosure{margin-top:8px}.fn-month-disclosure>summary{display:flex;align-items:center;gap:7px;width:max-content;list-style:none;cursor:pointer;color:var(--fn-green);font-size:.8rem;padding:5px 4px}.fn-month-disclosure>summary::-webkit-details-marker{display:none}.fn-month-disclosure>summary>svg{transition:transform .18s ease}.fn-month-disclosure[open]>summary>svg{transform:rotate(180deg)}.fn-investments{padding:22px 26px;margin-top:22px}.fn-investments .fn-list-row{gap:18px}.fn-investments small{display:block}
 .fn-period-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.fn-period-label{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:750;color:var(--fn-green)}
 .fn-period-top .fn-segments{background:transparent}.fn-period-top .fn-segments>button{min-height:38px;padding:7px 13px}.fn-period-top .fn-segments>button[aria-pressed=true]{background:var(--fn-ink);color:var(--fn-paper);box-shadow:none}
 .fn-period-current{margin-inline-start:auto;font-size:.82rem;color:var(--fn-muted);font-variant-numeric:tabular-nums;white-space:nowrap}

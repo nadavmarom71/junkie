@@ -98,8 +98,8 @@ export default function FinanceActivity({initialSection = 'activity'}: {initialS
         <header className="fn-money-map-head"><div><span className="fn-page-kicker">{range === 'month' ? 'החודש במספרים' : 'התקופה במספרים'}</span><h2 id="fn-money-map-title">{scope === 'business' ? 'מה קרה בעסק?' : 'לאן הלך הכסף האישי?'}</h2><p>{range === 'all' ? 'כל ההיסטוריה שנקלטה' : `${dateLabel(result.from,true)} — ${dateLabel(result.to,true)}`}</p></div><span className="fn-not-bank-badge">לא יתרת עו״ש</span></header>
 
         {scope === 'business' ? <div className="fn-money-metrics" aria-label="סיכום עסקי">
-          <Metric tone="business" label="היקף עסקי כולל" value={result.businessVolume?.amount} onClick={() => setVolumeOpen(true)} note="תקבולים בטווח + גבייה פתוחה"/>
-          <Metric tone="collection" label="עוד לגבייה" value={result.openCollections?.amount ?? result.collections?.amount} onClick={openCollections} note="כל הגבייה הפתוחה עכשיו"/>
+          <Metric tone="business" label="עסקאות שנפתחו בתקופה" value={result.contractVolume?.amount} onClick={() => setVolumeOpen(true)} note="היקף עסקי · לפי תאריך העסקה"/>
+          <Metric tone="collection" label="עוד לגבייה מהעסקאות האלה" value={result.collections?.amount} onClick={openCollections} note="של התקופה הנבחרת בלבד"/>
           <Metric tone="income" label="נכנס בתקופה" value={result.received.amount} onClick={() => reveal('received')}/>
           <Metric tone="expense" label="הוצאות עסקיות" value={result.businessSpending.amount} onClick={() => reveal('expense')}/>
           <Metric tone="partner" label="חלק דוד בתקופה" value={result.partnerShare?.amount} onClick={() => setPartnerOpen(true)} note="אחרי קיזוזים · לפירוט"/>
@@ -133,7 +133,7 @@ export default function FinanceActivity({initialSection = 'activity'}: {initialS
         {!!scopedLargest.length && <div className="fn-expense-highlights"><h3>הוצאות בולטות</h3>{scopedLargest.slice(0,5).map(item => <button className="fn-data-row" key={`${item.scope}:${item.id}`} onClick={() => reveal('expense')}><FinanceDataIcon label={item.description} scope={scope}/><span><strong>{item.description}</strong><small>{dateLabel(item.date)} · {scope === 'business' ? 'עסקי' : 'אישי'}</small></span><b>{money(Number(item.amount))}</b></button>)}</div>}
       </section>
 
-      {scope === 'business' && <p className="fn-footnote">ההיקף הכולל הוא התקבולים הרשומים בתקופה ועוד כל הגבייה הפתוחה עכשיו. ״נכנס בתקופה״ כולל רק כסף שרשום כשולם, ללא הגבייה העתידית. סטטוס ״שולם״ אינו הוכחה שיצאה קבלה. הסיכום אינו מחזור מאומת לדיווח מס ואינו יתרת הבנק.</p>}
+      {scope === 'business' && <><p className="fn-footnote">ההיקף העסקי משויך לתאריך העסקה הרשום, לא לתאריך הגבייה. ״נכנס בתקופה״ הוא כסף שהתקבל בתאריכי התקופה, גם מעסקאות קודמות. ההוצאות וחלק דוד שייכים לפעילות בתקופה; ״נשאר לנדב״ אינו יתרת הבנק או סכום פנוי להוצאה. זה אינו מחזור מאומת לדיווח מס.</p><button className="fn-link" onClick={openCollections}>כל הגבייה הפתוחה מכל התקופות: {money(result.openCollections?.amount)} · למועדי התשלום<ArrowLeft size={15}/></button></>}
 
       {result.spendingCoverage?.status !== 'reviewed' && <p className="fn-notice" role="status">{result.spendingCoverage?.note || 'כיסוי הוצאות הבנק עדיין לא אומת.'} המספרים כוללים רק תנועות שסווגו.</p>}
       {!!result.revenueBasis?.invalidSources.length && scope === 'business' && <p className="fn-notice">יש תקבולים שטרם שויכו לעסקת המקור. הם מופיעים בתנועות, אבל לא נספרים כמחזור נוסף.</p>}
@@ -149,11 +149,12 @@ export default function FinanceActivity({initialSection = 'activity'}: {initialS
     </>}
 
     <FinanceSheet open={!!selectedRecord} onClose={() => setSelectedRecord(null)} title="פרטי התנועה">{selectedRecord && <RecordDetails record={selectedRecord}/>}</FinanceSheet>
-    <FinanceSheet open={volumeOpen} onClose={() => setVolumeOpen(false)} title="היקף עסקי כולל — פירוט">{result && <>
-      <div className="fn-list-row"><strong>תקבולים רשומים בטווח</strong><b>{money(result.received.amount)}</b></div>
-      <div className="fn-list-row"><strong>כל הגבייה הפתוחה עכשיו</strong><b>{money(result.openCollections?.amount)}</b></div>
-      <div className="fn-detail-amount">{money(result.businessVolume?.amount)}</div>
-      <p className="fn-footnote">{result.businessVolume?.note} הכנסות עתידיות מריטיינרים שטרם נפתח עבורן חוב אינן נכללות כאן. כסף שהתקבל וגבייה פתוחה מוצגים בנפרד, ולא נספרים כשני תקבולים.</p>
+    <FinanceSheet open={volumeOpen} onClose={() => setVolumeOpen(false)} title="עסקאות שנפתחו בתקופה — פירוט">{result && <>
+      <div className="fn-list-row"><strong>היקף העסקאות לפי תאריך העסקה</strong><b>{money(result.contractVolume?.amount)}</b></div>
+      <div className="fn-list-row"><strong>מהעסקאות האלה, עדיין לגבייה</strong><b>{money(result.collections?.amount)}</b></div>
+      <div className="fn-list-row"><strong>כסף שהתקבל בתאריכי התקופה, מכל העסקאות</strong><b>{money(result.received.amount)}</b></div>
+      <p className="fn-footnote">{result.contractVolume?.note} תשלום על עסקה מחודש קודם מופיע ב״נכנס בתקופה״, ולא נחשב עסקה חדשה בחודש הגבייה. מועדי תשלומים עתידיים נשארים בגבייה ובתזרים.</p>
+      <h3>העסקאות שמרכיבות את ההיקף</h3>{result.contractItems?.map(item=><div className="fn-list-row" key={item.source}><span><strong>{item.description}</strong><small>{dateLabel(item.date,true)} · תאריך העסקה הרשום</small></span><b>{money(item.amount)}</b></div>)}{result.contractVolume?.amount===0 && <p className="fn-muted">לא נפתחו עסקאות חדשות בטווח הזה. גבייה על עסקאות קודמות עדיין יכולה להופיע ב״נכנס בתקופה״.</p>}
     </>}</FinanceSheet>
     <FinanceSheet open={partnerOpen} onClose={() => setPartnerOpen(false)} title="מה נשאר לנדב בתקופה">{result && <>
       <div className="fn-list-row"><strong>נכנס לפי הרישומים</strong><b>{money(result.received.amount)}</b></div>
@@ -191,6 +192,7 @@ function activityTitle(type: ActivityType, scope: Scope) {
 }
 
 function originLabel(origin: FinancialActivityRecord['origin'], source = '') {
+  if (source.startsWith('bank_transactions:statement:card:')) return 'דוח אשראי · השלמה היסטורית';
   if (source.startsWith('bank_transactions:grow-charge:')) return 'Grow · תשלום לקוח';
   if (source.startsWith('bank_transactions:grow-fee:')) return 'Grow · עמלת סליקה';
   return origin === 'bank_transactions' ? 'Financy / הבנק' : origin === 'personal_expenses' ? 'Junkie · אישי' : 'Junkie · עסקי';
