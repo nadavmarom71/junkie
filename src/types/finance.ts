@@ -4,7 +4,8 @@ export interface Missing { code: string; message: string; href?: string; source?
 export interface FinancialSummary {
   from: string; to: string; currency: string; received: Fact; businessSpending: Fact; personalSpending: Fact;
   spendingCoverage?: {status: 'reviewed' | 'partial' | 'unknown'; unreviewedCount: number | null; note: string};
-  grossTurnover?: Fact; collections?: Fact; cohortReceived?: Fact;
+  grossTurnover?: Fact; contractVolume?: Fact; businessVolume?: Fact; collections?: Fact; openCollections?: Fact; cohortReceived?: Fact;
+  partnerShare?: Fact; nadavRetained?: Fact; partnerItems?: PartnershipItem[];
   revenueBasis?: {cohort: string; from: string; to: string; settlementAsOf: string; cashFlowField: string; invalidSources: string[]};
   categories: {scope: string; category: string; amount: number}[];
   largest: {id: string; description: string; date: string; amount: number; scope: string; source: string}[];
@@ -55,6 +56,7 @@ export interface Obligation {
 }
 export interface FinancialState {
   asOf: string; currency: string; fetchedAt: string; bank: Fact; available: Fact; reserved: Fact;
+  bankBasis?: 'expected' | 'booked';
   reliability?: CalculationReliability;
   lastKnownBank?: {amount: number; asOf: string; sources: string[]} | null;
   lastKnownAvailable?: (Fact & {asOf: string}) | null;
@@ -78,6 +80,7 @@ export interface Checkpoint { days: number; date: string; bank: number | null; a
 export interface Forecast {
   asOf: string; days: number; end: string; state: FinancialState; events: CashEvent[];
   reliability?: CalculationReliability;
+  monthlyBaseline?: {status:Trust;fixedBusiness:number;fixedPersonal:number;variablePersonal:number|null;total:number|null;note:string;items:{id:string;name:string;scope:string;amount:number;status:string;source:string}[]};
   livingAverage?: { status: Trust; window: { from: string; to: string; days: number }; sampleCount: number; total: number | null; daily: number | null; monthly: number | null; sources: string[]; note: string; coverage?: {partial: boolean; warnings: string[]; legacyCount: number; bankCount: number; awaitingReview: number; cardSettlements: number; cardDetails: number}; items?: {source:string;id:string;origin:string;date:string;amount:number;description:string;category:string;accountName:string|null;note:string|null}[]; categories?: {category:string;count:number;amount:number}[]; forecastBasis?: {total:number|null;namedRecurringTotal:number;excludedSources:string[]} };
   undated: {id: string; label: string; amount: number; date?: string; reason: string; source: string}[];
   checkpoints: Checkpoint[]; minimum: number | null; closingAvailable: number | null;

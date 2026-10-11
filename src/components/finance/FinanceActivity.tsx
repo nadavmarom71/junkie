@@ -31,6 +31,8 @@ export default function FinanceActivity({initialSection = 'activity'}: {initialS
   const [activityType, setActivityType] = useState<ActivityType>('all');
   const [selectedRecord, setSelectedRecord] = useState<FinancialActivityRecord | null>(null);
   const [selectedPendingId, setSelectedPendingId] = useState<string | null>(null);
+  const [partnerOpen, setPartnerOpen] = useState(false);
+  const [volumeOpen, setVolumeOpen] = useState(false);
   const recordsRef = useRef<HTMLElement>(null);
   const start = range === 'all' ? '1900-01-01' : range === 'year' ? today.slice(0,4) + '-01-01' : range === 'month' ? today.slice(0,7) + '-01' : from;
   const end = range === 'custom' ? to : today;
@@ -45,7 +47,7 @@ export default function FinanceActivity({initialSection = 'activity'}: {initialS
   const scopedCategories = result?.categories.filter(category => category.scope === scope) || [];
   const scopedLargest = result?.largest.filter(item => item.scope === scope) || [];
   const scopedSpending = scope === 'business' ? result?.businessSpending.amount : result?.personalSpending.amount;
-  const businessNet = result?.received.amount != null && result.businessSpending.amount != null ? result.received.amount - result.businessSpending.amount : null;
+  const businessNet = result?.nadavRetained?.amount;
   const filterOptions: [ActivityType,string][] = scope === 'business' ? [['all','הכול'],['received','נכנס'],['expense','הוצאות'],['collection','גבייה']] : [['expense','הוצאות']];
 
   function setScope(nextScope: Scope) {
@@ -90,11 +92,12 @@ export default function FinanceActivity({initialSection = 'activity'}: {initialS
         <header className="fn-money-map-head"><div><span className="fn-page-kicker">{range === 'month' ? 'החודש במספרים' : 'התקופה במספרים'}</span><h2 id="fn-money-map-title">{scope === 'business' ? 'מה קרה בעסק?' : 'לאן הלך הכסף האישי?'}</h2><p>{range === 'all' ? 'כל ההיסטוריה שנקלטה' : `${dateLabel(result.from,true)} — ${dateLabel(result.to,true)}`}</p></div><span className="fn-not-bank-badge">לא יתרת עו״ש</span></header>
 
         {scope === 'business' ? <div className="fn-money-metrics" aria-label="סיכום עסקי">
-          <Metric tone="business" label="מחזור עסקאות" value={result.grossTurnover?.amount} onClick={() => reveal('income')}/>
-          <Metric tone="collection" label="עוד לגבייה" value={result.collections?.amount} onClick={openCollections}/>
+          <Metric tone="business" label="היקף עסקי כולל" value={result.businessVolume?.amount} onClick={() => setVolumeOpen(true)} note="תקבולים בטווח + גבייה פתוחה"/>
+          <Metric tone="collection" label="עוד לגבייה" value={result.openCollections?.amount ?? result.collections?.amount} onClick={openCollections} note="כל הגבייה הפתוחה עכשיו"/>
           <Metric tone="income" label="נכנס בתקופה" value={result.received.amount} onClick={() => reveal('received')}/>
           <Metric tone="expense" label="הוצאות עסקיות" value={result.businessSpending.amount} onClick={() => reveal('expense')}/>
-          <Metric tone="net" label="נשאר בעסק" value={businessNet} onClick={() => reveal('all')} note="לפי הרישומים"/>
+          <Metric tone="partner" label="חלק דוד בתקופה" value={result.partnerShare?.amount} onClick={() => setPartnerOpen(true)} note="אחרי קיזוזים · לפירוט"/>
+          <Metric tone="net" label="נשאר לנדב" value={businessNet} onClick={() => setPartnerOpen(true)} note="אחרי הוצאות ודוד · לפני מס"/>
         </div> : <div className="fn-personal-total"><FinanceDataIcon label="הוצאות אישיות" scope="personal"/><span><small>הוצאות אישיות בתקופה</small><strong>{money(result.personalSpending.amount)}</strong></span><button className="fn-link" onClick={() => reveal('expense')}>לכל התנועות<ArrowLeft size={15}/></button></div>}
 
         <div className="fn-money-map-body">
@@ -124,6 +127,8 @@ export default function FinanceActivity({initialSection = 'activity'}: {initialS
         {!!scopedLargest.length && <div className="fn-expense-highlights"><h3>הוצאות בולטות</h3>{scopedLargest.slice(0,5).map(item => <button className="fn-data-row" key={`${item.scope}:${item.id}`} onClick={() => reveal('expense')}><FinanceDataIcon label={item.description} scope={scope}/><span><strong>{item.description}</strong><small>{dateLabel(item.date)} · {scope === 'business' ? 'עסקי' : 'אישי'}</small></span><b>{money(Number(item.amount))}</b></button>)}</div>}
       </section>
 
+      {scope === 'business' && <p className="fn-footnote">ההיקף הכולל הוא התקבולים הרשומים בתקופה ועוד כל הגבייה הפתוחה עכשיו. ״נכנס בתקופה״ כולל רק כסף שרשום כשולם, ללא הגבייה העתידית. סטטוס ״שולם״ אינו הוכחה שיצאה קבלה. הסיכום אינו מחזור מאומת לדיווח מס ואינו יתרת הבנק.</p>}
+
       {result.spendingCoverage?.status !== 'reviewed' && <p className="fn-notice" role="status">{result.spendingCoverage?.note || 'כיסוי הוצאות הבנק עדיין לא אומת.'} המספרים כוללים רק תנועות שסווגו.</p>}
       {!!result.revenueBasis?.invalidSources.length && scope === 'business' && <p className="fn-notice">יש תקבולים שטרם שויכו לעסקת המקור. הם מופיעים בתנועות, אבל לא נספרים כמחזור נוסף.</p>}
 
@@ -137,6 +142,20 @@ export default function FinanceActivity({initialSection = 'activity'}: {initialS
     </>}
 
     <FinanceSheet open={!!selectedRecord} onClose={() => setSelectedRecord(null)} title="פרטי התנועה">{selectedRecord && <RecordDetails record={selectedRecord}/>}</FinanceSheet>
+    <FinanceSheet open={volumeOpen} onClose={() => setVolumeOpen(false)} title="היקף עסקי כולל — פירוט">{result && <>
+      <div className="fn-list-row"><strong>תקבולים רשומים בטווח</strong><b>{money(result.received.amount)}</b></div>
+      <div className="fn-list-row"><strong>כל הגבייה הפתוחה עכשיו</strong><b>{money(result.openCollections?.amount)}</b></div>
+      <div className="fn-detail-amount">{money(result.businessVolume?.amount)}</div>
+      <p className="fn-footnote">{result.businessVolume?.note} הכנסות עתידיות מריטיינרים שטרם נפתח עבורן חוב אינן נכללות כאן. כסף שהתקבל וגבייה פתוחה מוצגים בנפרד, ולא נספרים כשני תקבולים.</p>
+    </>}</FinanceSheet>
+    <FinanceSheet open={partnerOpen} onClose={() => setPartnerOpen(false)} title="מה נשאר לנדב בתקופה">{result && <>
+      <div className="fn-list-row"><strong>נכנס לפי הרישומים</strong><b>{money(result.received.amount)}</b></div>
+      <div className="fn-list-row"><strong>הוצאות עסקיות</strong><b>{money(result.businessSpending.amount)}</b></div>
+      <div className="fn-list-row"><strong>חלק דוד, לאחר קיזוזים</strong><b className="fn-partner-color">{money(result.partnerShare?.amount)}</b></div>
+      <div className="fn-detail-amount">{money(result.nadavRetained?.amount)}</div>
+      <p className="fn-footnote">{result.nadavRetained?.note} {result.partnerShare?.note}</p>
+      <h3>פירוט חלק דוד</h3>{result.partnerItems?.map(item=><div className="fn-list-row" key={item.id}><span><strong>{item.description}</strong><small>{dateLabel(item.date,true)}{item.davidPercent != null ? ` · ${item.davidPercent}% דוד` : ''}</small></span><b>{money(item.delta)}</b></div>)}
+    </>}</FinanceSheet>
     <FinanceSheet open={!!selectedPending} onClose={() => setSelectedPendingId(null)} title="בדיקת תנועה ממתינה">{selectedPending && pendingInbox.data && <TransactionReview key={selectedPending.id} transaction={selectedPending} inbox={pendingInbox.data} canMutate/>}</FinanceSheet>
   </section>;
 }
