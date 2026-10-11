@@ -6,13 +6,14 @@ export const financeGet = <T,>(path: string) => api.get<never, T>(`/finance${pat
 export const financePost = <T,>(path: string, body: unknown) => api.post<never, T>(`/finance${path}`, body, {timeout: 90000});
 export const financePut = <T,>(path: string, body: unknown) => api.put<never, T>(`/finance${path}`, body);
 export function useFinance<T>(path: string, enabled = true) {
-  return useQuery<T, Error>({queryKey: ['finance', path], queryFn: () => financeGet<T>(path), enabled, staleTime: 30000, retry: 1});
+  return useQuery<T, Error>({queryKey: ['finance', path], queryFn: () => financeGet<T>(path), enabled, staleTime: 30000, refetchOnWindowFocus: 'always', refetchInterval: 60000, retry: 1});
 }
 export function useFinanceSave<T = unknown>() {
   const client = useQueryClient();
   return useMutation<T, Error, {path: string; body: unknown; method?: 'post' | 'put'}>({
     mutationFn: ({path, body, method}) => method === 'post' ? financePost<T>(path, body) : financePut<T>(path, body),
     onSuccess: () => client.invalidateQueries({queryKey: ['finance']}),
+    onError: (_error, variables) => variables.path.startsWith('/sync/') ? client.invalidateQueries({queryKey: ['finance']}) : undefined,
   });
 }
 export function useFinanceFilePreview<T = unknown>(path: string) {

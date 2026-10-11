@@ -56,23 +56,24 @@ export default function FinancePage() {
     let notice: {kind:'success'|'error';text:string};
     try {
       await openFinanceSync.mutateAsync({method:'post',path:'/sync/open_finance',body:{}});
-      await client.refetchQueries({queryKey:['finance'],type:'active'});
+      await client.invalidateQueries();
       const connections = await financeGet<Connections>('/connections');
       client.setQueryData(['finance','/connections'],connections);
       const openFinance = connections.open_finance;
-      const providerDates = [
-        ...(openFinance.checkingAccounts || []).map(account => account.connectionDataDate),
-        ...(openFinance.bankConnections || []).map(connection => connection.lastFetchedDataDate),
-      ].filter((value): value is string => Boolean(value)).sort();
+      // Retired connections must not make the current checking feed look old.
+      const providerDates = (openFinance.checkingAccounts || []).map(account => account.connectionDataDate).filter((value): value is string => Boolean(value)).sort();
       const balanceDates = (openFinance.checkingAccounts || []).map(account => account.balanceAt).filter((value): value is string => Boolean(value)).sort();
-      const providerDate = providerDates.at(-1);
-      const balanceDate = balanceDates.at(-1);
+      const providerDate = providerDates[0];
+      const balanceDate = balanceDates[0];
       const freshness = [
         providerDate ? `נתוני הספק עד ${numericDateLabel(providerDate)}` : null,
         balanceDate && balanceDate !== providerDate ? `יתרות עד ${numericDateLabel(balanceDate)}` : null,
       ].filter(Boolean).join(' · ');
       notice={kind:'success',text:freshness ? `הסנכרון הושלם. ${freshness}.` : 'הסנכרון הושלם, אך Open Finance לא מסרה תאריך מידע חדש.'};
     } catch (error) {
+      // A failed provider pull must still refresh saved balances, debt edits,
+      // connection errors and all other screens from the shared backend.
+      await client.invalidateQueries();
       notice={kind:'error',text:error instanceof Error ? `הסנכרון לא הושלם: ${error.message}` : 'הסנכרון מול Open Finance לא הושלם.'};
     } finally {
       // Keep the feedback visible even when the provider returns immediately;
