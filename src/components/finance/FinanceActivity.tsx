@@ -11,6 +11,8 @@ import FinanceRecurring from './FinanceRecurring';
 import { FinanceDataIcon, financeVisual } from './FinanceVisuals';
 import FinanceCategoryDonut from './FinanceCategoryDonut';
 import { TransactionReview } from './FinanceConnections';
+import FinanceDateFilter from './FinanceDateFilter';
+import type { FinanceRange } from '@/lib/financeDateRanges';
 
 const sections = ['activity','collections','clients','retainers','recurring'] as const;
 type Section = typeof sections[number];
@@ -23,7 +25,7 @@ export default function FinanceActivity({initialSection = 'activity'}: {initialS
   const requestedSection = params.get('section');
   const section: Section = sections.includes(requestedSection as Section) ? requestedSection as Section : initialSection;
   const scope: Scope = params.get('scope') === 'personal' ? 'personal' : 'business';
-  const [range, setRange] = useState('month');
+  const [range, setRange] = useState<FinanceRange>('month');
   const [from, setFrom] = useState(today.slice(0,7) + '-01');
   const [to, setTo] = useState(today);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -49,6 +51,10 @@ export default function FinanceActivity({initialSection = 'activity'}: {initialS
   const scopedSpending = scope === 'business' ? result?.businessSpending.amount : result?.personalSpending.amount;
   const businessNet = result?.nadavRetained?.amount;
   const filterOptions: [ActivityType,string][] = scope === 'business' ? [['all','הכול'],['received','נכנס'],['expense','הוצאות'],['collection','גבייה']] : [['expense','הוצאות']];
+  const dateFilter = {today,range,from,to,start,end,onPreset:(next:FinanceRange)=>{
+    if(next==='custom'&&range!=='custom'){setFrom(start==='1900-01-01'?today.slice(0,7)+'-01':start);setTo(end);}
+    setRange(next);
+  },onDates:(nextFrom:string,nextTo:string)=>{setFrom(nextFrom);setTo(nextTo);setRange('custom');}};
 
   function setScope(nextScope: Scope) {
     const next = new URLSearchParams(params);
@@ -82,7 +88,7 @@ export default function FinanceActivity({initialSection = 'activity'}: {initialS
 
   return <section className="fn-page fn-page-activity">
     <div className="fn-section-head fn-page-head fn-activity-heading"><div><span className="fn-page-kicker">הכסף שנכנס והכסף שיוצא</span><h1>העסק והיום־יום</h1><p className="fn-muted">בוחרים עסקי או אישי, ורואים רק את מה שרלוונטי.</p></div><div className="fn-scope-switch fn-expense-switch fn-main-scope-switch" role="group" aria-label="בחירת פעילות עסקית או אישית"><button aria-pressed={scope === 'business'} onClick={() => setScope('business')}>עסקי</button><button aria-pressed={scope === 'personal'} onClick={() => setScope('personal')}>אישי</button></div></div>
-    <div className="fn-section-head fn-filter-row fn-filter-dock"><div className="fn-segments">{[['month','החודש'],['year','השנה'],['all','כל הזמן'],['custom','טווח אחר']].map(([value,label]) => <button key={value} aria-pressed={range === value} onClick={() => setRange(value)}>{label}</button>)}</div>{range === 'custom' && <div className="fn-date-range"><label>מ־<input type="date" max={to} value={from} onChange={event => setFrom(event.target.value)}/></label><label>עד<input type="date" min={from} max={today} value={to} onChange={event => setTo(event.target.value)}/></label></div>}</div>
+    <FinanceDateFilter {...dateFilter}/>
     {!valid && <p className="fn-error">צריך טווח תאריכים תקין שמסתיים היום או קודם.</p>}
     <FinanceError error={pendingInbox.error} retry={() => void pendingInbox.refetch()}/>
     {valid && pendingTransactions.length > 0 && pendingInbox.data && <PendingReviewPanel transactions={pendingTransactions} onOpen={transaction => setSelectedPendingId(transaction.id)}/>} 
@@ -133,9 +139,10 @@ export default function FinanceActivity({initialSection = 'activity'}: {initialS
       {!!result.revenueBasis?.invalidSources.length && scope === 'business' && <p className="fn-notice">יש תקבולים שטרם שויכו לעסקת המקור. הם מופיעים בתנועות, אבל לא נספרים כמחזור נוסף.</p>}
 
       <section ref={recordsRef} className="fn-unified-activity" aria-labelledby="fn-unified-title">
+        <FinanceDateFilter {...dateFilter} compact/>
         <div className="fn-section-head"><div><span className="fn-page-kicker">הפירוט שמתחת למספרים</span><h2 id="fn-unified-title">{selectedCategory || activityTitle(activityType,scope)}</h2><p className="fn-muted">אותו מקור נתונים שמרכיב את הסיכום והפאי למעלה.</p></div><div className="fn-activity-filter-chips" aria-label="סינון תנועות">{filterOptions.map(([value,label]) => <button key={value} aria-pressed={activityType === value && !selectedCategory} onClick={() => reveal(value,null)}>{label}</button>)}</div></div>
         <FinanceError error={activity.error} retry={() => void activity.refetch()}/>{activity.isPending && <Loading label="טוען את התנועות…"/>}
-        {activity.data && !activity.error && <div className="fn-surface fn-activity-list"><p className="fn-record-count">{activity.data.total} תנועות בטווח שנבחר{selectedCategory ? ` · ${selectedCategory}` : ''}</p>{activity.data.items.length ? activity.data.items.map(record => <button className="fn-record-row" key={`${record.origin}:${record.id}`} onClick={() => setSelectedRecord(record)}><span className="fn-record-main"><FinanceDataIcon label={`${record.description} ${record.category}`} scope={record.scope} kind={record.type}/><span className="fn-record-copy"><strong>{record.description}</strong><small>{dateLabel(record.date,true)} · {record.category} · {originLabel(record.origin)}{record.type === 'collection' ? ' · ממתין לגבייה' : ''}</small></span></span><span className={`fn-record-value ${recordTone(record.type)}`}>{recordPrefix(record.type)}{money(record.amount)}<ArrowLeft size={15}/></span></button>) : <Empty title="אין תנועות שמתאימות לבחירה">אפשר לבחור קטגוריה אחרת או להרחיב את טווח התאריכים.</Empty>}</div>}
+        {activity.data && !activity.error && <div className="fn-surface fn-activity-list"><p className="fn-record-count">{activity.data.total} תנועות בטווח שנבחר{selectedCategory ? ` · ${selectedCategory}` : ''}</p>{activity.data.items.length ? activity.data.items.map(record => <button className="fn-record-row" key={`${record.origin}:${record.id}`} onClick={() => setSelectedRecord(record)}><span className="fn-record-main"><FinanceDataIcon label={`${record.description} ${record.category}`} scope={record.scope} kind={record.type}/><span className="fn-record-copy"><strong>{record.description}</strong><small>{dateLabel(record.date,true)} · {record.category} · {originLabel(record.origin,record.source)}{record.type === 'collection' ? ' · ממתין לגבייה' : ''}</small></span></span><span className={`fn-record-value ${recordTone(record.type)}`}>{recordPrefix(record.type)}{money(record.amount)}<ArrowLeft size={15}/></span></button>) : <Empty title="אין תנועות שמתאימות לבחירה">אפשר לבחור קטגוריה אחרת או להרחיב את טווח התאריכים.</Empty>}</div>}
       </section>
 
       <details className="fn-details fn-record-management"><summary>ניהול ועריכת רישומים <ChevronDown size={16}/></summary><p className="fn-footnote">הוספה, עריכה, מחיקה וייצוא נשארו זמינים כאן בלי להעמיס על התמונה הראשית.</p><FinanceRecords key={`${scope}:${start}:${end}`} from={start} to={end} enabled={valid} initialTab={scope} hideTabs/></details>
@@ -183,7 +190,9 @@ function activityTitle(type: ActivityType, scope: Scope) {
   return scope === 'business' ? 'כל הפעילות העסקית' : 'כל ההוצאות האישיות';
 }
 
-function originLabel(origin: FinancialActivityRecord['origin']) {
+function originLabel(origin: FinancialActivityRecord['origin'], source = '') {
+  if (source.startsWith('bank_transactions:grow-charge:')) return 'Grow · תשלום לקוח';
+  if (source.startsWith('bank_transactions:grow-fee:')) return 'Grow · עמלת סליקה';
   return origin === 'bank_transactions' ? 'Financy / הבנק' : origin === 'personal_expenses' ? 'Junkie · אישי' : 'Junkie · עסקי';
 }
 
@@ -196,5 +205,5 @@ function recordPrefix(type: FinancialActivityRecord['type']) {
 }
 
 function RecordDetails({record}: {record: FinancialActivityRecord}) {
-  return <div className="fn-record-detail"><FinanceDataIcon label={`${record.description} ${record.category}`} scope={record.scope} kind={record.type} size={23}/><strong className={`fn-detail-amount ${recordTone(record.type)}`}>{recordPrefix(record.type)}{money(record.amount,record.currency)}</strong><h3>{record.description}</h3>{record.note && <p className="fn-record-note">{record.note}</p>}<dl className="fn-definition"><div><dt>תאריך</dt><dd>{dateLabel(record.date,true)}</dd></div><div><dt>קטגוריה</dt><dd>{record.category}</dd></div><div><dt>צד</dt><dd>{record.scope === 'business' ? 'עסקי' : 'אישי'}</dd></div><div><dt>מקור</dt><dd>{originLabel(record.origin)}</dd></div>{record.merchant && <div><dt>בית עסק</dt><dd>{record.merchant}</dd></div>}{record.paymentStatus && <div><dt>סטטוס</dt><dd>{record.type === 'collection' ? 'ממתין לגבייה' : record.paymentStatus}</dd></div>}</dl></div>;
+  return <div className="fn-record-detail"><FinanceDataIcon label={`${record.description} ${record.category}`} scope={record.scope} kind={record.type} size={23}/><strong className={`fn-detail-amount ${recordTone(record.type)}`}>{recordPrefix(record.type)}{money(record.amount,record.currency)}</strong><h3>{record.description}</h3>{record.note && <p className="fn-record-note">{record.note}</p>}<dl className="fn-definition"><div><dt>תאריך</dt><dd>{dateLabel(record.date,true)}</dd></div><div><dt>קטגוריה</dt><dd>{record.category}</dd></div><div><dt>צד</dt><dd>{record.scope === 'business' ? 'עסקי' : 'אישי'}</dd></div><div><dt>מקור</dt><dd>{originLabel(record.origin,record.source)}</dd></div>{record.merchant && <div><dt>בית עסק</dt><dd>{record.merchant}</dd></div>}{record.paymentStatus && <div><dt>סטטוס</dt><dd>{record.type === 'collection' ? 'ממתין לגבייה' : record.paymentStatus}</dd></div>}</dl></div>;
 }
