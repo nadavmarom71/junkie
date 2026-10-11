@@ -78,7 +78,7 @@ export interface Checkpoint { days: number; date: string; bank: number | null; a
 export interface Forecast {
   asOf: string; days: number; end: string; state: FinancialState; events: CashEvent[];
   reliability?: CalculationReliability;
-  livingAverage?: { status: Trust; window: { from: string; to: string; days: number }; sampleCount: number; total: number | null; daily: number | null; monthly: number | null; sources: string[]; note: string; coverage?: {partial: boolean; warnings: string[]; legacyCount: number; bankCount: number; awaitingReview: number; cardSettlements: number; cardDetails: number} };
+  livingAverage?: { status: Trust; window: { from: string; to: string; days: number }; sampleCount: number; total: number | null; daily: number | null; monthly: number | null; sources: string[]; note: string; coverage?: {partial: boolean; warnings: string[]; legacyCount: number; bankCount: number; awaitingReview: number; cardSettlements: number; cardDetails: number}; items?: {source:string;id:string;origin:string;date:string;amount:number;description:string;category:string;accountName:string|null;note:string|null}[]; categories?: {category:string;count:number;amount:number}[]; forecastBasis?: {total:number|null;namedRecurringTotal:number;excludedSources:string[]} };
   undated: {id: string; label: string; amount: number; date?: string; reason: string; source: string}[];
   checkpoints: Checkpoint[]; minimum: number | null; closingAvailable: number | null;
   openingBasis?: 'current_balance' | 'last_known_snapshot'; openingAsOf?: string;
