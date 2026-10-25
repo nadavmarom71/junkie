@@ -51,7 +51,8 @@ export interface CalculationReliability { status: 'confirmed' | 'estimated' | 'i
 export interface Obligation {
   id: string; label: string; amount: number | null; currency?: string; status: Trust; date: string | null; reserved: boolean; source: string; note?: string;
   sources?: string[]; boundary?: {date: string; source: string | null; kind: string};
-  items?: {id: string; source: string; merchant: string; amount: number; direction: 'in'|'out'; date: string; transactionDate: string; valueDate: string | null; status: string; providerStatus: string | null; statusInferred: boolean; providerTransactionId: string | null; providerReference: string | null; supersedes: string[]; supersededBy: string | null; reason: string}[];
+  card?: {accountId:string;name:string;providerId:string|null;checkingAccount:{id:string;name:string;providerId?:string|null;basis:string}|null};
+  items?: {id: string; source: string; merchant: string; amount: number; direction: 'in'|'out'; date: string; transactionDate: string; valueDate: string | null; status: string; providerStatus: string | null; statusInferred: boolean; providerTransactionId: string | null; providerReference: string | null; supersedes: string[]; supersededBy: string | null; reason: string;classification?:string;reviewStatus?:string;category?:string|null;note?:string|null;purpose?:'personal'|'business'|'david_payment'|'unclassified'}[];
   overlap?: {source: string; candidates: string[]; reason: string}[];
   excluded?: {source: string; replacedBy: string; amount: number; reason: string}[];
 }
@@ -101,7 +102,7 @@ export interface Simulation {
   firstShortfall: string | null; recovery: string | null; answer: 'unknown' | 'shortfall' | 'conditional' | 'fits';
   missing: Missing[]; baseline: Checkpoint[]; forecast: Forecast; stored: false;
 }
-export interface Connection { configured: boolean; missing: string[]; state: string; lastSuccess?: string; error?: {code: string; message: string}; counts?: Record<string, number>; checkingAccounts?: {id: string; name: string; providerId?: string | null; connectionStatus: string | null; connectionDataDate: string | null; balanceAt: string | null; listedInLatestSync: boolean}[]; bankConnections?: {id: string; name: string; status: string; lastFetchedDataDate: string | null; expiryDate: string | null}[] }
+export interface Connection { configured: boolean; missing: string[]; state: string; lastSuccess?: string; error?: {code: string; message: string}; counts?: Record<string, number>; checkingAccounts?: {id: string; name: string; providerId?: string | null; connectionStatus: string | null; connectionDataDate: string | null; balanceAt: string | null; balanceBasis?:'expected'|'booked';bookedBalanceAt?:string|null; listedInLatestSync: boolean}[]; bankConnections?: {id: string; name: string; status: string; lastFetchedDataDate: string | null; expiryDate: string | null}[] }
 export type Connections = Record<'open_finance' | 'sumit', Connection>;
 export interface SumitImportPreview {
   readOnly: true;

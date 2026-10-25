@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowUpLeft, ChartNoAxesCombined, CheckCircle2, ChevronDown,
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { financeGet, useFinance, useFinanceSave } from '@/hooks/useFinance';
-import ObligationEvidence from '@/components/finance/ObligationEvidence';
+import FinanceObligations from '@/components/finance/FinanceObligations';
 import type { Connections, FinancialState, Forecast, Obligation } from '@/types/finance';
 import FinanceTimeline, { TimelineRows } from '@/components/finance/FinanceTimeline';
 import FinanceScenario from '@/components/finance/FinanceScenario';
@@ -17,6 +17,7 @@ import { FinanceBusinessEditor } from '@/components/finance/FinanceTransactionEd
 import api from '@/lib/api';
 import type { BusinessTransaction } from '@/types';
 import { accountName, dateLabel, money, numericDateLabel } from '@/lib/financeFormatters';
+import { refreshChangeLabel, type FinanceSyncResult } from '@/lib/financeRefreshNotice';
 import '@/components/finance/finance.css';
 
 const views = [
@@ -41,11 +42,11 @@ export default function FinancePage() {
   const [refreshNotice,setRefreshNotice] = useState<{kind:'success'|'error';text:string} | null>(null);
   const [isRefreshing,setIsRefreshing] = useState(false);
   const client = useQueryClient();
-  const openFinanceSync = useFinanceSave();
+  const openFinanceSync = useFinanceSave<FinanceSyncResult>();
   const {logout,localAccess} = useAuth();
   useEffect(() => {
-    if (!refreshNotice) return;
-    const timer = window.setTimeout(() => setRefreshNotice(null),8000);
+    if (!refreshNotice || refreshNotice.kind === 'error') return;
+    const timer = window.setTimeout(() => setRefreshNotice(null),20000);
     return () => window.clearTimeout(timer);
   },[refreshNotice]);
   async function refreshFromOpenFinance() {
@@ -55,21 +56,25 @@ export default function FinancePage() {
     const startedAt = performance.now();
     let notice: {kind:'success'|'error';text:string};
     try {
-      await openFinanceSync.mutateAsync({method:'post',path:'/sync/open_finance',body:{}});
+      const result=await openFinanceSync.mutateAsync({method:'post',path:'/sync/open_finance',body:{}});
       await client.invalidateQueries();
-      const connections = await financeGet<Connections>('/connections');
-      client.setQueryData(['finance','/connections'],connections);
-      const openFinance = connections.open_finance;
+      // A successful pull is still successful if the separate freshness read
+      // fails. Report the missing timestamp without claiming the sync failed.
+      const connections = await financeGet<Connections>('/connections').catch(()=>null);
+      if(connections)client.setQueryData(['finance','/connections'],connections);
+      const openFinance = connections?.open_finance;
       // Retired connections must not make the current checking feed look old.
-      const providerDates = (openFinance.checkingAccounts || []).map(account => account.connectionDataDate).filter((value): value is string => Boolean(value)).sort();
-      const balanceDates = (openFinance.checkingAccounts || []).map(account => account.balanceAt).filter((value): value is string => Boolean(value)).sort();
+      const providerDates = (openFinance?.checkingAccounts || []).map(account => account.connectionDataDate).filter((value): value is string => Boolean(value)).sort();
+      const balanceDates = (openFinance?.checkingAccounts || []).map(account => account.balanceAt).filter((value): value is string => Boolean(value)).sort();
       const providerDate = providerDates[0];
       const balanceDate = balanceDates[0];
       const freshness = [
         providerDate ? `נתוני הספק עד ${numericDateLabel(providerDate)}` : null,
-        balanceDate && balanceDate !== providerDate ? `יתרות עד ${numericDateLabel(balanceDate)}` : null,
+        balanceDate ? `יתרות${openFinance?.checkingAccounts?.some(account=>account.balanceBasis==='expected')?' משוערות':''} עד ${numericDateLabel(balanceDate)}` : null,
       ].filter(Boolean).join(' · ');
-      notice={kind:'success',text:freshness ? `הסנכרון הושלם. ${freshness}.` : 'הסנכרון הושלם, אך Open Finance לא מסרה תאריך מידע חדש.'};
+      const time=new Intl.DateTimeFormat('he-IL',{timeZone:'Asia/Jerusalem',hour:'2-digit',minute:'2-digit'}).format(new Date());
+      const change=refreshChangeLabel(result);
+      notice={kind:'success',text:`סונכרן מול Open Finance ב־${time}. ${change} ${freshness?`${freshness}.`:'הספק לא מסר תאריך מידע חדש.'}`};
     } catch (error) {
       // A failed provider pull must still refresh saved balances, debt edits,
       // connection errors and all other screens from the shared backend.
@@ -209,7 +214,7 @@ function Overview({navigate,openScenario}: {navigate:(view:string,focus?:'collec
           {!!otherAccounts.length && <details className="fn-details"><summary>כרטיסים וחשבונות נוספים <span>{otherAccounts.length}</span></summary>{otherAccounts.map(account => <AccountBalanceRow key={account.id} account={account}/>)}</details>}
           <nav className="fn-shortcuts"><button className="fn-link" onClick={() => {setDetail(null);navigate('connections');}}>חיבור הבנק והתנועות<ArrowLeft size={15}/></button></nav>
         </>}
-        {detail === 'obligations' && <>{s.obligations.map(obligation => <div key={obligation.id}><div className="fn-list-row"><div><strong>{obligation.label}</strong><small>{obligation.date ? dateLabel(obligation.date,true) : 'המועד לא נקבע'} · {obligation.reserved ? 'כבר נוכה מהפנוי' : 'ינוכה במועד התשלום'}</small></div><div className="fn-value-stack"><b>{money(obligation.amount)}</b>{(obligation.source === 'tax_obligation' || obligation.source.startsWith('obligation:')) && <button className="fn-link" onClick={() => {setDetail(null);setEditObligation(obligation);}}>עריכה</button>}{obligation.source.startsWith('business_transactions:') && <button className="fn-link" onClick={() => {setDetail(null);setEditBusinessSourceId(obligation.source.slice('business_transactions:'.length));}}>עריכת ההוצאה המקורית</button>}</div></div><ObligationEvidence obligation={obligation}/></div>)}<div className="fn-shortcuts"><button className="fn-secondary" onClick={() => {setDetail(null);setEditObligation('new');}}>הוספת התחייבות</button><button className="fn-link" onClick={() => {setDetail(null);setEditObligation('tax');}}>הזנת מס שנותר לתשלום</button></div></>}
+        {detail === 'obligations' && <><FinanceObligations state={s} onEdit={obligation=>{setDetail(null);setEditObligation(obligation);}} onEditBusiness={id=>{setDetail(null);setEditBusinessSourceId(id);}}/><div className="fn-shortcuts"><button className="fn-secondary" onClick={() => {setDetail(null);setEditObligation('new');}}>הוספת התחייבות</button><button className="fn-link" onClick={() => {setDetail(null);setEditObligation('tax');}}>הזנת מס שנותר לתשלום</button></div></>}
         {detail === 'collections' && <>{s.collections.status === 'unknown' && <p className="fn-error" role="alert">תמונת הגבייה אינה מלאה: מקור לא נטען או שיש רישום שדורש בדיקה. זה לא אומר שאין חובות פתוחים.</p>}{s.collections.items.map(item => <div className="fn-list-row" key={item.id}><div><strong>{item.description}</strong><small>צפוי: {dateLabel(item.date,true)}</small></div><b>{money(item.amount)}</b></div>)}{s.collections.status !== 'unknown' && !s.collections.items.length && <p className="fn-muted">לא נמצאו חובות פתוחים במקור שנטען.</p>}<button className="fn-link" onClick={() => {setDetail(null);navigate('activity','collections');}}>לניהול הגבייה כאן<ArrowLeft size={15}/></button></>}
       </FinanceSheet>
       <FinanceSheet open={!!editObligation} onClose={() => setEditObligation(null)} title="התחייבות לתשלום">{editObligation && <ObligationEditor key={typeof editObligation === 'string' ? editObligation : editObligation.id} obligation={editObligation}/>}</FinanceSheet>

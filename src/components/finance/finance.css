@@ -28,6 +28,38 @@
 .fn-section-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}
 .fn-section-head h1+.fn-muted{margin-top:8px}
 .fn-accounts-group{margin-block:16px 4px}
+.fn-obligations-equation{display:flex;flex-wrap:wrap;gap:10px 22px;padding:16px 18px;border:1px solid var(--fn-line);border-radius:20px;background:var(--fn-mint);margin-bottom:10px;font-size:.86rem}
+.fn-obligations-equation>span,.fn-obligations-equation>strong{display:flex;flex-direction:column;gap:4px}
+.fn-obligations-equation bdi{font-size:1.12rem;font-variant-numeric:tabular-nums}
+.fn-obligations-label{margin-block:24px 12px!important}
+.fn-obligation-card{border:1px solid var(--fn-line);border-radius:24px;overflow:hidden;margin-block:14px;background:var(--fn-paper)}
+.fn-obligation-card-header{display:flex;align-items:center;gap:12px;padding:18px 20px;background:color-mix(in oklch,var(--fn-mint) 45%,var(--fn-paper));border-bottom:1px solid var(--fn-line)}
+.fn-obligation-card-header>div{min-width:0;overflow-wrap:anywhere}
+.fn-card-icon{width:44px;height:44px;flex-shrink:0;display:grid;place-items:center;border:1px solid var(--fn-line);border-radius:14px;color:var(--fn-green);background:var(--fn-paper)}
+.fn-card-bill{padding:18px 20px}
+.fn-card-bill+.fn-card-bill{border-top:1px solid var(--fn-line)}
+.fn-card-bill-pending{background:color-mix(in oklch,var(--fn-paper) 91%,oklch(87% .08 84))}
+.fn-card-bill-heading{display:flex;justify-content:space-between;gap:14px;align-items:baseline}
+.fn-card-bill-heading>div{display:flex;flex-direction:column;min-width:0}
+.fn-card-bill-heading>b{font-size:1.3rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.fn-card-purpose-totals{display:flex;gap:12px 24px;flex-wrap:wrap;margin-block:14px 10px}
+.fn-card-purpose-totals>div{min-width:86px}
+.fn-card-purpose-totals dt{font-size:.79rem;color:var(--fn-muted)}
+.fn-card-purpose-totals dd{margin:0;font-size:.98rem;font-weight:600;font-variant-numeric:tabular-nums}
+.fn-card-overlap{font-size:.83rem;line-height:1.65;color:var(--fn-amber);margin-block:10px!important}
+.fn-card-transactions{margin-top:8px}
+.fn-card-transactions>summary{font-size:.9rem;color:var(--fn-green)}
+.fn-card-source{margin-top:8px;font-size:.81rem;color:var(--fn-muted)}
+.fn-card-source>summary{min-height:44px;font-weight:400}
+.fn-card-filters{display:flex;flex-wrap:wrap;gap:6px;margin-block:8px 12px}
+.fn-card-filters button{border:1px solid var(--fn-line);background:var(--fn-paper);padding:8px 12px;min-height:44px;border-radius:999px;font-size:.83rem}
+.fn-card-filters button:hover{background:var(--fn-mint)}
+.fn-card-filters button[aria-pressed=true]{background:var(--fn-ink);border-color:var(--fn-ink);color:var(--fn-paper)}
+.fn-card-purchase{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding-block:14px;border-bottom:1px solid var(--fn-line);font-size:.9rem}
+.fn-card-purchase>div{min-width:0;overflow-wrap:anywhere}
+.fn-card-purchase small{display:block;margin-top:3px}
+.fn-card-purchase>b{white-space:nowrap;font-variant-numeric:tabular-nums}
+@media(max-width:600px){.fn-obligation-card-header,.fn-card-bill{padding:16px}.fn-obligations-equation{gap:12px 18px}.fn-card-bill-heading{flex-wrap:wrap;gap:6px}.fn-card-bill-heading>div{flex-basis:100%}.fn-card-purpose-totals{gap:10px 18px}}
 .fn-muted{color:var(--fn-muted);font-size:.9rem}
 .fn-asof{color:var(--fn-muted);font-size:.8rem}
 .fn-surface{background:var(--fn-paper);border:1px solid var(--fn-line);border-radius:30px;padding:24px;min-width:0;box-shadow:0 14px 38px color-mix(in oklch,var(--fn-green) 5%,transparent)}
