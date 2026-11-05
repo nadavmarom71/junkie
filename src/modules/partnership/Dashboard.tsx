@@ -1,11 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { TrendingUp, TrendingDown, Scale, Coins, AlertCircle, CheckCircle, Zap } from 'lucide-react';
 import { usePartnership } from './PartnershipContext';
+import api from '@/lib/api';
+import { toast } from 'sonner';
+import type { SettlementInput, SettlementPreview } from './settlement-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmt(n: number) {
-  return Math.abs(n).toLocaleString('he-IL', { maximumFractionDigits: 0 });
+function fmt(n: number | null) {
+  return n === null ? 'לא ידוע' : Math.abs(n).toLocaleString('he-IL', { maximumFractionDigits: 2 });
 }
 
 function currentMonthKey() {
@@ -75,9 +78,12 @@ function PartnerCard({
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
 export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void }) {
-  const { state, dispatch, computedForMonth } = usePartnership();
+  const { state, computedForMonth, canonical, recordSettlement, isSavingSettlement, pendingSettlement, loadError, saveError } = usePartnership();
   const [filter, setFilter] = useState<'month' | 'all'>('all');
   const [settleOpen, setSettleOpen] = useState(false);
+  const [settling, setSettling] = useState(false);
+  const settleLock = useRef(false);
+  const request = useRef<SettlementInput | null>(null);
 
   const monthKey = currentMonthKey();
   const cv = useMemo(
@@ -86,39 +92,30 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
   );
 
   // Smart Settle Up logic
-  const netSettleAmount = Math.min(cv.nadavOwesDavid, cv.davidOwesNadav);
-  const canSettle = cv.nadavOwesDavid > 0 || cv.davidOwesNadav > 0;
+  const balancesKnown = cv.nadavOwesDavid !== null && cv.davidOwesNadav !== null;
+  const nd = cv.nadavOwesDavid ?? 0, dn = cv.davidOwesNadav ?? 0;
+  const netSettleAmount = balancesKnown ? Math.min(nd, dn) : 0;
+  const canSettle = balancesKnown && !loadError && !saveError && !pendingSettlement && (nd > 0 || dn > 0);
 
-  function doSettle(mode: 'net' | 'full') {
+  async function doSettle(mode: 'net' | 'full') {
+    if (!canSettle || settleLock.current) return;
+    settleLock.current = true;
+    setSettling(true);
     const cleared =
       mode === 'net'
         ? { nadavOwesDavidCleared: netSettleAmount, davidOwesNadavCleared: netSettleAmount }
-        : { nadavOwesDavidCleared: cv.nadavOwesDavid, davidOwesNadavCleared: cv.davidOwesNadav };
+        : { nadavOwesDavidCleared: nd, davidOwesNadavCleared: dn };
 
-    const total = mode === 'net' ? netSettleAmount : Math.max(cv.nadavOwesDavid, cv.davidOwesNadav);
-    const finalBalance = mode === 'full' ? 0 : Math.abs(cv.nadavOwesDavid - cv.davidOwesNadav);
-
-    dispatch({
-      type: 'ADD_SETTLEMENT',
-      payload: {
-        id: `s_${Date.now()}`,
-        date: new Date().toISOString().split('T')[0],
-        description: mode === 'net' ? `קיזוז חוב — ₪${fmt(netSettleAmount)}` : `סגירת חוב מלאה — ₪${fmt(total)}`,
-        createdAt: new Date().toISOString(),
-        ...cleared,
-      },
-    });
-
-    // Show remaining after settle
-    const remaining = mode === 'full' ? 0 : finalBalance;
-    alert(
-      mode === 'full'
-        ? 'כל היתרות נוקו ✅'
-        : remaining > 0
-        ? `בוצע קיזוז ₪${fmt(netSettleAmount)}.\n${cv.nadavOwesDavid > cv.davidOwesNadav ? 'נדב' : 'דוד'} עדיין חייב ₪${fmt(remaining)}`
-        : 'בוצע קיזוז מלא ✅'
-    );
-    setSettleOpen(false);
+    const total = mode === 'net' ? netSettleAmount : Math.max(nd, dn);
+    request.current ||= { requestId: crypto.randomUUID(), date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()), description: mode === 'net' ? `קיזוז חוב — ₪${fmt(netSettleAmount)}` : `סגירת חוב מלאה — ₪${fmt(total)}`, ...cleared };
+    try {
+      const preview = await api.post<unknown, SettlementPreview>('/partnership/settlements/preview', request.current);
+      const result = await recordSettlement(request.current, preview.fingerprint);
+      toast.success(`התשלום נשמר בשרת. נדב חייב לדוד: ₪${fmt(result.partnership.outstanding.amount)}`);
+      request.current = null;
+      setSettleOpen(false);
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'תוצאת השמירה לא ברורה; יש לבדוק את הבקשה הקודמת.'); }
+    finally { settleLock.current = false; setSettling(false); }
   }
 
   const profits = cv.grossProfit < 0;
@@ -210,24 +207,26 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
       {/* Balance / Debt Cards */}
       <div>
         <p className="text-sm font-semibold text-white/40 uppercase tracking-widest mb-2">יתרות שוטפות</p>
+        <p className="text-xs text-white/50 mb-2">לפי מנוע הכספים, כולל תקבולי בנק ועוגן ההתחשבנות{canonical?.status === 'estimated' ? ' · אומדן' : ''}</p>
+        {pendingSettlement && <button onClick={() => onNavigate('add')} className="text-sm text-amber-300 underline mb-2">יש בקשת תשלום קודמת. פתח את טופס ההעברה כדי לאמת אותה ללא רישום כפול.</button>}
         <div className="grid grid-cols-2 gap-2.5">
           {/* Nadav owes David */}
           <div
             className="rounded-2xl p-4"
             style={{
-              background: cv.nadavOwesDavid > 0 ? 'rgba(249,115,22,0.08)' : 'rgba(0,196,140,0.05)',
-              border: `1px solid ${cv.nadavOwesDavid > 0 ? 'rgba(249,115,22,0.25)' : 'rgba(0,196,140,0.15)'}`,
+              background: nd > 0 ? 'rgba(249,115,22,0.08)' : 'rgba(0,196,140,0.05)',
+              border: `1px solid ${nd > 0 ? 'rgba(249,115,22,0.25)' : 'rgba(0,196,140,0.15)'}`,
             }}
           >
             <div className="text-sm font-semibold text-white/50 mb-1">נדב חייב לדוד</div>
             <div
               className="text-2xl font-extrabold"
-              style={{ color: cv.nadavOwesDavid > 0 ? '#f97316' : '#00C48C' }}
+              style={{ color: nd > 0 ? '#f97316' : '#00C48C' }}
             >
               ₪{fmt(cv.nadavOwesDavid)}
             </div>
             <div className="text-sm text-white/35 mt-0.5">
-              {cv.nadavOwesDavid > 0 ? 'תשלומים עתידיים' : 'מאוזן ✓'}
+              {!balancesKnown ? 'החוב לא נטען' : nd > 0 ? 'תשלומים עתידיים' : 'מאוזן ✓'}
             </div>
           </div>
 
@@ -235,19 +234,19 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
           <div
             className="rounded-2xl p-4"
             style={{
-              background: cv.davidOwesNadav > 0 ? 'rgba(124,58,237,0.08)' : 'rgba(0,196,140,0.05)',
-              border: `1px solid ${cv.davidOwesNadav > 0 ? 'rgba(124,58,237,0.25)' : 'rgba(0,196,140,0.15)'}`,
+              background: dn > 0 ? 'rgba(124,58,237,0.08)' : 'rgba(0,196,140,0.05)',
+              border: `1px solid ${dn > 0 ? 'rgba(124,58,237,0.25)' : 'rgba(0,196,140,0.15)'}`,
             }}
           >
             <div className="text-sm font-semibold text-white/50 mb-1">דוד חייב לנדב</div>
             <div
               className="text-2xl font-extrabold"
-              style={{ color: cv.davidOwesNadav > 0 ? '#a78bfa' : '#00C48C' }}
+              style={{ color: dn > 0 ? '#a78bfa' : '#00C48C' }}
             >
               ₪{fmt(cv.davidOwesNadav)}
             </div>
             <div className="text-sm text-white/35 mt-0.5">
-              {cv.davidOwesNadav > 0 ? 'החזר הוצאות' : 'מאוזן ✓'}
+              {!balancesKnown ? 'החוב לא נטען' : dn > 0 ? 'החזר הוצאות' : 'מאוזן ✓'}
             </div>
           </div>
         </div>
@@ -301,10 +300,10 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
               </div>
               <p className="text-sm text-white/60">
                 קזז ₪{fmt(netSettleAmount)} משני הצדדים.{' '}
-                {cv.nadavOwesDavid > cv.davidOwesNadav
-                  ? `נדב ישלם לדוד ₪${fmt(cv.nadavOwesDavid - netSettleAmount)}`
-                  : cv.davidOwesNadav > cv.nadavOwesDavid
-                  ? `דוד ישלם לנדב ₪${fmt(cv.davidOwesNadav - netSettleAmount)}`
+                {nd > dn
+                  ? `נדב ישלם לדוד ₪${fmt(nd - netSettleAmount)}`
+                  : dn > nd
+                  ? `דוד ישלם לנדב ₪${fmt(dn - netSettleAmount)}`
                   : 'כל היתרות מתקזזות בדיוק!'}
               </p>
             </div>
@@ -313,6 +312,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
           <div className="flex gap-2">
             {netSettleAmount > 0 && (
               <button
+                disabled={settling || isSavingSettlement}
                 onClick={() => doSettle('net')}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5"
                 style={{ background: 'rgba(124,58,237,0.3)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.4)' }}
@@ -322,6 +322,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
               </button>
             )}
             <button
+              disabled={settling || isSavingSettlement}
               onClick={() => doSettle('full')}
               className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5"
               style={{ background: 'rgba(0,196,140,0.15)', color: '#00C48C', border: '1px solid rgba(0,196,140,0.3)' }}

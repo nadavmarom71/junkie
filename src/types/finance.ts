@@ -38,6 +38,7 @@ export interface PartnershipItem {
   review?: {status: string; note: string};
 }
 export interface Partnership {
+  davidOwesNadav?: number | null;
   status: Trust; items: PartnershipItem[];
   settlements: {id: string; date: string; description: string; paid: number | null; received: number | null; note: string}[];
   davidCalculated?: number; expenseAdjustments?: number; settled?: number; recordedOutstanding?: number;

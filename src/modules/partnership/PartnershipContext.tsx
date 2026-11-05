@@ -1,12 +1,16 @@
 /**
- * PARTNERSHIP MODULE — Fully Isolated State
- * Tracks income/expense splits between Nadav (65%) and David (35%).
- * No external dependencies on the rest of the app.
+ * Historical partnership editor. Running debts and settlement confirmations
+ * come from the shared server finance engine, including bank receipts and anchors.
  */
 import { createContext, useContext, useReducer, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { useFinance } from '@/hooks/useFinance';
+import { useQueryClient } from '@tanstack/react-query';
+import type { Partnership } from '@/types/finance';
+import { createSettlementWriter } from './settlement-client';
+import type { PendingSettlement, SettlementInput } from './settlement-client';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -98,7 +102,6 @@ interface EditTxPayload {
 type Action =
   | { type: 'ADD_TRANSACTION'; payload: PartnershipTx }
   | { type: 'DELETE_TRANSACTION'; payload: string }
-  | { type: 'ADD_SETTLEMENT'; payload: Settlement }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<PartnershipSettings> }
   | { type: 'EDIT_TRANSACTION'; payload: EditTxPayload }
   | { type: 'ADD_LINKED_EXPENSE'; payload: { txId: string; expense: LinkedExpense } }
@@ -203,9 +206,6 @@ function reducer(state: PartnershipState, action: Action): PartnershipState {
     case 'DELETE_TRANSACTION':
       return { ...state, transactions: state.transactions.filter(t => t.id !== action.payload) };
 
-    case 'ADD_SETTLEMENT':
-      return { ...state, settlements: [action.payload, ...state.settlements] };
-
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } };
 
@@ -294,9 +294,11 @@ interface ComputedValues {
   afterTaxProfit: number;
   nadavNet: number;
   davidNet: number;
-  nadavOwesDavid: number;
-  davidOwesNadav: number;
+  nadavOwesDavid: number | null;
+  davidOwesNadav: number | null;
 }
+
+interface SettlementResult { data: PartnershipState; revision: string; partnership: Partnership; settlement: Settlement; replayed: boolean }
 
 interface PartnershipContextValue {
   state: PartnershipState;
@@ -308,6 +310,10 @@ interface PartnershipContextValue {
   saveError: string | null;
   pendingRecurring: PartnershipTx[];
   approveRecurring: (id: string) => void;
+  canonical: Partnership | null;
+  isSavingSettlement: boolean;
+  pendingSettlement: PendingSettlement | null;
+  recordSettlement: (input: SettlementInput, fingerprint: string) => Promise<SettlementResult>;
 }
 
 const PartnershipContext = createContext<PartnershipContextValue | null>(null);
@@ -327,6 +333,43 @@ export function PartnershipProvider({ children }: { children: ReactNode }) {
   const queueRef = useRef<Promise<void>>(Promise.resolve());
   // Once true, state changes are persisted. Stays false until initial fetch completes.
   const readyRef = useRef(false);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const canonicalQuery = useFinance<Partnership>('/partnership');
+  const canonical = canonicalQuery.isError ? null : canonicalQuery.data || null;
+  const client = useQueryClient();
+  const [writer] = useState(() => createSettlementWriter<SettlementResult>(body => api.post<unknown, SettlementResult>('/partnership/settlements', body), localStorage));
+  const [pendingSettlement, setPendingSettlement] = useState<PendingSettlement | null>(() => writer.pending());
+  const [isSavingSettlement, setIsSavingSettlement] = useState(false);
+  const savingSettlementRef = useRef(false);
+
+  async function recordSettlement(input: SettlementInput, fingerprint: string) {
+    if (!readyRef.current || JSON.stringify(stateRef.current) !== savedRef.current) throw new Error('המתן לשמירת השינויים הקודמים או רענן לפני רישום תשלום.');
+    const request = { input, expectedFingerprint: fingerprint };
+    savingSettlementRef.current = true;
+    setIsSavingSettlement(true);
+    try {
+      const job = writer.save(request);
+      setPendingSettlement(writer.pending());
+      const result = await job;
+      savedRef.current = JSON.stringify(result.data);
+      revisionRef.current = result.revision;
+      localStorage.setItem(STORAGE_KEY, savedRef.current);
+      dispatch({ type: 'RESET', payload: result.data });
+      await client.cancelQueries({ queryKey: ['finance'] });
+      client.setQueryData(['finance', '/partnership'], result.partnership);
+      void client.invalidateQueries({ queryKey: ['finance'] });
+      writer.acknowledge(input.requestId);
+      setPendingSettlement(null);
+      return result;
+    } catch (error) {
+      setPendingSettlement(writer.pending());
+      throw error;
+    } finally {
+      savingSettlementRef.current = false;
+      setIsSavingSettlement(false);
+    }
+  }
 
   // Reads never generate income or promote stale browser data into the database.
   useEffect(() => {
@@ -449,6 +492,7 @@ export function PartnershipProvider({ children }: { children: ReactNode }) {
           revisionRef.current = result.revision;
           savedRef.current = serialized;
           setSaveError(null);
+          void client.invalidateQueries({ queryKey: ['finance'] });
         } catch (error) {
           readyRef.current = false;
           const message = error instanceof Error ? error.message : 'השמירה לא הצליחה';
@@ -477,21 +521,16 @@ export function PartnershipProvider({ children }: { children: ReactNode }) {
     const davidNet = filtered.reduce((sum, t) => sum + (t.type === 'income' ? 1 : -1) * t.breakdown.davidShare, 0);
 
     // Balances always use ALL transactions (running total)
-    const allTxs = state.transactions;
-    const rawNadavOwesDavid = allTxs.reduce((s, t) => s + t.breakdown.nadavOwesDavidDelta, 0);
-    const rawDavidOwesNadav = allTxs.reduce((s, t) => s + t.breakdown.davidOwesNadavDelta, 0);
-    const clearedNadavOwesDavid = state.settlements.reduce((s, st) => s + st.nadavOwesDavidCleared, 0);
-    const clearedDavidOwesNadav = state.settlements.reduce((s, st) => s + st.davidOwesNadavCleared, 0);
-    const nadavOwesDavid = Math.max(0, rawNadavOwesDavid - clearedNadavOwesDavid);
-    const davidOwesNadav = Math.max(0, rawDavidOwesNadav - clearedDavidOwesNadav);
+    const nadavOwesDavid = canonical?.outstanding.amount ?? null;
+    const davidOwesNadav = canonical?.davidOwesNadav ?? null;
 
     return { totalIncome, totalExpenses, grossProfit, taxReserve, afterTaxProfit, nadavNet, davidNet, nadavOwesDavid, davidOwesNadav };
-  }, [state]);
+  }, [state, canonical]);
 
   const computed = useMemo(() => computedForMonth('all'), [computedForMonth]);
 
   return (
-    <PartnershipContext.Provider value={{ state, dispatch: action => { if (readyRef.current) dispatch(action); }, computed, computedForMonth, isLoading, loadError, saveError, pendingRecurring, approveRecurring }}>
+    <PartnershipContext.Provider value={{ state, dispatch: action => { if (readyRef.current && !savingSettlementRef.current) dispatch(action); }, computed, computedForMonth, isLoading: isLoading || canonicalQuery.isPending, loadError: loadError || (canonicalQuery.isError ? 'חישוב החוב מהשרת לא נטען. לא ניתן לרשום תשלום.' : null), saveError, pendingRecurring, approveRecurring, canonical, isSavingSettlement, pendingSettlement, recordSettlement }}>
       {children}
     </PartnershipContext.Provider>
   );

@@ -26,7 +26,9 @@ apiClient.interceptors.response.use(
       error.response?.data?.error ||
       error.message ||
       'שגיאה לא ידועה';
-    return Promise.reject(new Error(message));
+    // A settlement may explicitly prove rejection before writing. A timeout or
+    // generic server error never means "not saved" and must retain its retry ID.
+    return Promise.reject(Object.assign(new Error(message), { notSaved: error.response?.data?.notSaved === true }));
   }
 );
 
