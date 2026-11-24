@@ -48,7 +48,21 @@
 .fn-card-purpose-totals dd{margin:0;font-size:.98rem;font-weight:600;font-variant-numeric:tabular-nums}
 .fn-card-overlap{font-size:.83rem;line-height:1.65;color:var(--fn-amber);margin-block:10px!important}
 .fn-card-transactions{margin-top:8px}
-.fn-card-transactions>summary{font-size:.9rem;color:var(--fn-green)}
+.fn-card-transactions>h4{font-size:1rem;margin-block:20px 10px}
+.fn-card-category{border-top:1px solid var(--fn-line)}
+.fn-card-category>summary{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:72px;padding-block:14px;cursor:pointer;list-style:none}
+.fn-card-category>summary::-webkit-details-marker{display:none}
+.fn-card-category>summary:focus-visible{outline:2px solid var(--fn-green);outline-offset:3px;border-radius:8px}
+.fn-card-category-label{display:flex;align-items:center;gap:10px;min-width:0}
+.fn-card-category-label>span:first-child{font-size:1.15rem;flex-shrink:0}
+.fn-card-category-label strong{display:block;font-size:.95rem;overflow-wrap:anywhere}
+.fn-card-category-label small{display:block;color:var(--fn-muted);font-size:.78rem;margin-top:4px}
+.fn-card-category>summary>b{white-space:nowrap;font-variant-numeric:tabular-nums;font-size:1rem}
+.fn-card-category-toggle{display:inline-block;margin-inline-start:10px;color:var(--fn-muted)}
+.fn-card-category[open] .fn-card-category-toggle{transform:rotate(180deg)}
+.fn-card-category[open]{padding-bottom:10px}
+.fn-card-category[open]>summary{color:var(--fn-green)}
+.fn-card-purchase-credit>b{color:var(--fn-green)}
 .fn-card-source{margin-top:8px;font-size:.81rem;color:var(--fn-muted)}
 .fn-card-source>summary{min-height:44px;font-weight:400}
 .fn-card-filters{display:flex;flex-wrap:wrap;gap:6px;margin-block:8px 12px}
