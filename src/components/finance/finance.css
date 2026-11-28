@@ -825,3 +825,6 @@
 .fn-dock-bubble strong{font-size:.84rem}.fn-dock-bubble small{font-size:.68rem}
 @media(max-width:760px){.fn-dock-bubble{grid-template-columns:repeat(3,minmax(0,1fr));width:min(620px,calc(100vw - 24px));inset-block-end:86px}}
 @media(max-width:620px){.fn-dock-bubble{left:12px;right:12px;inset-block-end:82px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:auto;border-radius:30px;transform:translateY(12px) scale(.98)}.fn-dock-bubble::before{border-radius:29px}.fn-dock-bubble.is-open{transform:translateY(0) scale(1)}.fn-dock-bubble>button{min-height:64px}}
+
+/* Consent and manual valuation: same RTL surfaces, no financial actions on load. */
+.fn-consent-banner{background:var(--fn-cream,#fff3db);margin-block-end:24px}.fn-consent-banner>p{margin-block:8px}.fn-consent-banner small{display:block}.fn-consent-banner .fn-list-row{gap:16px;flex-wrap:wrap}.fn-consent-banner .fn-secondary{white-space:normal}.fn-investment-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px}.fn-investment-form{padding-block:16px;border-block-start:1px solid var(--fn-line)}
